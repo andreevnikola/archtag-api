@@ -1,7 +1,7 @@
 package com.andreev.security.services.authentication;
 
 import com.andreev.security.domain.authentication.UserEntity;
-import com.andreev.security.repositories.UserRepository;
+import com.andreev.security.repositories.authentication.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

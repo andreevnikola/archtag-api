@@ -1,4 +1,4 @@
-package com.andreev.security.repositories;
+package com.andreev.security.repositories.authentication;
 
 import com.andreev.security.domain.authentication.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;

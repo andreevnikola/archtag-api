@@ -1,9 +1,8 @@
 package com.andreev.security.controllers;
 
-import com.andreev.security.dto.authentication.AuthenticationResponse;
-import com.andreev.security.dto.authentication.RegisterRequest;
-import com.andreev.security.dto.authentication.SigninRequest;
+import com.andreev.security.dto.authentication.*;
 import com.andreev.security.services.authentication.AuthenticationService;
+import com.andreev.security.services.authentication.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,12 +12,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.NoSuchElementException;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthenticationController {
 
     private final AuthenticationService authService;
+    private final RefreshTokenService refreshTokenService;
 
     Logger logger = LoggerFactory.getLogger(AuthenticationController.class);
 
@@ -42,9 +44,31 @@ public class AuthenticationController {
             @RequestBody SigninRequest req
     ) {
         try {
-            return ResponseEntity.ok(authService.signin(req));
+            AuthenticationResponse response = authService.signin(req);
+            return ResponseEntity.ok(response);
         } catch (BadCredentialsException e) {
             return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/revalidate")
+    public ResponseEntity<RevalidateJwtResponse> revalidateToken(
+            @RequestBody RevalidateJwtRequest req
+    ) {
+        try {
+            final String jwt = refreshTokenService.revalidateJwt(req.getRefreshToken());
+
+            final RevalidateJwtResponse jwtResponse = RevalidateJwtResponse.builder()
+                    .token(jwt)
+                    .build();
+
+            return ResponseEntity.ok(jwtResponse);
+
+        } catch (NoSuchElementException e) {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             logger.error(e.getMessage());
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);

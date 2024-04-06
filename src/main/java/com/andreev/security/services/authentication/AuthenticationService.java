@@ -5,9 +5,8 @@ import com.andreev.security.domain.authentication.UserEntity;
 import com.andreev.security.dto.authentication.AuthenticationResponse;
 import com.andreev.security.dto.authentication.RegisterRequest;
 import com.andreev.security.dto.authentication.SigninRequest;
-import com.andreev.security.repositories.UserRepository;
+import com.andreev.security.repositories.authentication.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +20,7 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthenticationResponse register(RegisterRequest req) {
         UserEntity user = UserEntity.builder()
@@ -33,9 +33,11 @@ public class AuthenticationService {
                 .build();
         userRepo.save(user);
         String jwt = jwtService.generateToken(user);
+        String refreshToken = refreshTokenService.generateRefreshToken(user.getUuid());
 
         return AuthenticationResponse.builder()
                 .token(jwt)
+                .refreshToken(refreshToken)
                 .build();
     }
 
@@ -48,9 +50,15 @@ public class AuthenticationService {
         );
 
         UserEntity user = userRepo.findByEmail(req.getEmail()).orElseThrow();
+
+        refreshTokenService.deleteAllRefreshTokensForUser(user.getUuid());
+
         String jwt = jwtService.generateToken(user);
+
+        String refreshToken = refreshTokenService.generateRefreshToken(user.getUuid());
         return AuthenticationResponse.builder()
                 .token(jwt)
+                .refreshToken(refreshToken)
                 .build();
     }
 }
