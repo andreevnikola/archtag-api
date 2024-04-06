@@ -17,6 +17,10 @@ public class UserDetailsService implements org.springframework.security.core.use
         return userRepository.findByUuid(uuid).orElseThrow(() -> new UsernameNotFoundException("This user does not exist."));
     }
 
+    public void deleteUserByEmail(String email) {
+        userRepository.deleteByEmail(email);
+    }
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByEmail(username).orElseThrow(() -> new UsernameNotFoundException("This user does not exist."));
