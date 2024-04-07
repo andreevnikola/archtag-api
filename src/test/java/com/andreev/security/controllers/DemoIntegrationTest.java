@@ -27,7 +27,7 @@ public class DemoIntegrationTest {
     }
 
     @Test
-    @WithUserDetails("intenhrationtest@google.com")
+    @WithUserDetails("integrationtest@google.com")
     public void testThatProtectedDemoRouteReturnsHttp200ToAuthenticatedUsers() throws Exception {
         mockMvc.perform(get("/api/demo"))
                 .andExpect(status().isOk());
