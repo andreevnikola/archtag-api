@@ -1,9 +1,8 @@
 package com.andreev.security.utils;
 
-import com.andreev.security.controllers.AuthenticationController;
-import com.andreev.security.dto.authentication.AuthenticationResponse;
-import com.andreev.security.dto.authentication.RegisterRequest;
-import com.andreev.security.dto.authentication.SigninRequest;
+import com.andreev.security.user.dto.authentication.AuthenticationResponse;
+import com.andreev.security.user.dto.authentication.RegisterRequest;
+import com.andreev.security.user.dto.authentication.SigninRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

@@ -1,11 +1,10 @@
 package com.andreev.security.controllers;
 
-import com.andreev.security.dto.authentication.AuthenticationResponse;
-import com.andreev.security.dto.authentication.RevalidateJwtRequest;
-import com.andreev.security.dto.authentication.SigninRequest;
+import com.andreev.security.user.dto.authentication.AuthenticationResponse;
+import com.andreev.security.user.dto.authentication.RevalidateJwtRequest;
 import com.andreev.security.utils.AuthenticationTestsUtils;
-import com.andreev.security.dto.authentication.RegisterRequest;
-import com.andreev.security.services.authentication.UserDetailsService;
+import com.andreev.security.user.dto.authentication.RegisterRequest;
+import com.andreev.security.user.services.authentication.UserDetailsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
