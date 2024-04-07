@@ -3,6 +3,7 @@ package com.andreev.security.controllers;
 import com.andreev.security.dto.authentication.*;
 import com.andreev.security.services.authentication.AuthenticationService;
 import com.andreev.security.services.authentication.RefreshTokenService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +28,7 @@ public class AuthenticationController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<AuthenticationResponse> register(
-            @RequestBody RegisterRequest req
+            @Valid @RequestBody RegisterRequest req
     ) {
         try {
             return ResponseEntity.ok(authService.register(req));
@@ -41,7 +42,7 @@ public class AuthenticationController {
 
     @PostMapping("/signin")
     public ResponseEntity<AuthenticationResponse> signin(
-            @RequestBody SigninRequest req
+            @Valid @RequestBody SigninRequest req
     ) {
         try {
             AuthenticationResponse response = authService.signin(req);
