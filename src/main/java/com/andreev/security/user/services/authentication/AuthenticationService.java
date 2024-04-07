@@ -51,7 +51,7 @@ public class AuthenticationService {
 
         UserEntity user = userRepo.findByEmail(req.getEmail()).orElseThrow();
 
-        refreshTokenService.deleteAllRefreshTokensForUser(user.getUuid());
+//        refreshTokenService.deleteAllRefreshTokensForUser(user.getUuid());
 
         String jwt = jwtService.generateToken(user);
 
