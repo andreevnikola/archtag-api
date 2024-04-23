@@ -1,5 +1,6 @@
 package com.andreev.archtag.user.controllers;
 
+import com.andreev.archtag.global.exception.ApiRequestException;
 import com.andreev.archtag.user.services.authentication.AuthenticationService;
 import com.andreev.archtag.user.services.authentication.RefreshTokenService;
 import com.andreev.archtag.user.dto.authentication.*;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.NoSuchElementException;
 
@@ -32,11 +34,11 @@ public class AuthenticationController {
     ) {
         try {
             return ResponseEntity.ok(authService.register(req));
-        } catch(DataIntegrityViolationException e) {
-            return new ResponseEntity<>(null, HttpStatus.CONFLICT);
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiRequestException(HttpStatus.CONFLICT, "Акаунт с тази електронна поща вече съществува!");
         } catch (Exception e) {
             logger.error(e.getMessage());
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -48,10 +50,10 @@ public class AuthenticationController {
             AuthenticationResponse response = authService.signin(req);
             return ResponseEntity.ok(response);
         } catch (BadCredentialsException e) {
-            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+            throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.");
         } catch (Exception e) {
             logger.error(e.getMessage());
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
