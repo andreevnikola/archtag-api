@@ -41,7 +41,6 @@ public class JwtService {
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
-        System.out.println("TUPO: " + claimsResolver.apply(claims));
         return claimsResolver.apply(claims);
     }
 
@@ -58,22 +57,29 @@ public class JwtService {
             Map<String, Object> extraClaims,
             UserEntity userEntityDetails
     ) {
-    return Jwts
-            .builder()
-            .setClaims(extraClaims)
-            .setSubject(userEntityDetails.getUuid())
-            .setIssuedAt(new Date(System.currentTimeMillis()))
-            .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 5))
-            .claim("email", userEntityDetails.getEmail())
-            .claim("first_name", userEntityDetails.getFirstname())
-            .claim("last_name", userEntityDetails.getLastname())
-            .signWith(getSigingKey(), SignatureAlgorithm.HS256)
-            .compact();
+        return Jwts
+                .builder()
+                .setClaims(extraClaims)
+                .setSubject(userEntityDetails.getUuid())
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 5))
+                .claim("email", userEntityDetails.getEmail())
+                .claim("firstname", userEntityDetails.getFirstname())
+                .claim("lastname", userEntityDetails.getLastname())
+                .claim("role", userEntityDetails.getRole().name())
+                .claim("isBanned", userEntityDetails.getIsBanned())
+                .signWith(getSigingKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public boolean isTokenValid(String token) {
+        final String uuid = extractUuid(token);
+        return uuid != null && uuid != "" && !isTokenExpired(token);
     }
 
     public boolean isTokenValid(String token, UserEntity userEntityDetails) {
-        final String email = extractUuid(token);
-        return email.equals(userEntityDetails.getUuid()) && !isTokenExpired(token);
+        final String uuid = extractUuid(token);
+        return uuid.equals(userEntityDetails.getUuid()) && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {

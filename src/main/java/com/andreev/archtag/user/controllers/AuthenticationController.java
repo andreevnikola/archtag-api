@@ -2,8 +2,10 @@ package com.andreev.archtag.user.controllers;
 
 import com.andreev.archtag.global.exception.ApiRequestException;
 import com.andreev.archtag.user.services.authentication.AuthenticationService;
+import com.andreev.archtag.user.services.authentication.JwtService;
 import com.andreev.archtag.user.services.authentication.RefreshTokenService;
 import com.andreev.archtag.user.dto.authentication.*;
+import com.andreev.archtag.user.services.authentication.UserDetailsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -24,6 +26,8 @@ public class AuthenticationController {
 
     private final AuthenticationService authService;
     private final RefreshTokenService refreshTokenService;
+    private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
 
     Logger logger = LoggerFactory.getLogger(AuthenticationController.class);
 
@@ -76,5 +80,17 @@ public class AuthenticationController {
             logger.error(e.getMessage());
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @GetMapping("/get-user-data/{token}")
+    public ResponseEntity<UserDto> getUserData(
+            @PathVariable String token
+    ) {
+
+        if (jwtService.isTokenValid(token) == false) {
+            throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Invalid token.");
+        }
+
+        return ResponseEntity.ok(userDetailsService.getUserByToken(token));
     }
 }
