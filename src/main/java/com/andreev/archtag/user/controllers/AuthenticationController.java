@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -66,7 +67,9 @@ public class AuthenticationController {
             @RequestBody RevalidateJwtRequest req
     ) {
         try {
-            final String jwt = refreshTokenService.revalidateJwt(req.getRefreshToken());
+            final CompletableFuture<String> jwtFuture = refreshTokenService.revalidateJwt(req.getRefreshToken());
+
+            final String jwt = jwtFuture.get();
 
             final RevalidateJwtResponse jwtResponse = RevalidateJwtResponse.builder()
                     .token(jwt)

@@ -5,9 +5,11 @@ import com.andreev.archtag.user.domain.authentication.UserEntity;
 import com.andreev.archtag.user.repositories.authentication.RefreshTokenRepository;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -25,11 +27,12 @@ public class RefreshTokenService {
         return refreshTokenRepository.save(refreshTokenEntity).getRefreshToken();
     }
 
-    public String revalidateJwt(String refreshToken) throws Exception {
+    @Async
+    public CompletableFuture<String> revalidateJwt(String refreshToken) throws Exception {
         RefreshTokenEntity refreshTokenEntity = refreshTokenRepository.findByRefreshToken(refreshToken).orElseThrow();
         if (refreshTokenEntity.getValidUntil().before(new Date())) throw new Exception("Refresh token has expired");
         UserEntity user = userRepository.findByUuid(refreshTokenEntity.getUserUuid()).orElseThrow();
-        return jwtService.generateToken(user);
+        return CompletableFuture.completedFuture(jwtService.generateToken(user));
     }
 
     public void deleteAllRefreshTokensForUser(String userUuid) {

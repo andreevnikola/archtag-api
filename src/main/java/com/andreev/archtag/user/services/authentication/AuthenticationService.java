@@ -9,12 +9,15 @@ import com.andreev.archtag.user.dto.authentication.SigninRequest;
 import com.andreev.archtag.user.repositories.authentication.RefreshTokenRepository;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,7 +31,7 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
 
-    public AuthenticationResponse register(RegisterRequest req) {
+    public AuthenticationResponse register(RegisterRequest req) throws ExecutionException, InterruptedException {
         UserEntity user = UserEntity.builder()
                 .firstname(req.getFirstname())
                 .lastname(req.getLastname())
@@ -37,39 +40,54 @@ public class AuthenticationService {
                 .role(Role.USER)
                 .isBanned(false)
                 .build();
-        userRepo.save(user);
+
+        CompletableFuture saveUserFuture = CompletableFuture.runAsync(() -> userRepo.save(user));
+        CompletableFuture<String> refreshTokenFuture = CompletableFuture.supplyAsync(() -> refreshTokenService.generateRefreshToken(user.getUuid()));
+        CompletableFuture<String> refreshTokenCombinedFutued = saveUserFuture.thenCombine(refreshTokenFuture, (aVoid, refreshTokenFromFuture) -> refreshTokenFromFuture);
+
         String jwt = jwtService.generateToken(user);
-        String refreshToken = refreshTokenService.generateRefreshToken(user.getUuid());
 
         return AuthenticationResponse.builder()
                 .token(jwt)
-                .refreshToken(refreshToken)
+                .refreshToken(refreshTokenCombinedFutued.get())
                 .build();
     }
 
-    public AuthenticationResponse signin(SigninRequest req) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        req.getEmail(),
-                        req.getPassword()
-                )
-        );
+    private CompletableFuture authenticateUser(String email, String password) {
+        return CompletableFuture.runAsync(() -> {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            email,
+                            password
+                    )
+            );
+        });
+    }
+
+    private CompletableFuture ifNeededdeleteRefreshTokenFuture(String userUuid) {
+        return CompletableFuture.runAsync(() -> {
+            Collection<RefreshTokenEntity> refreshTokens = refreshTokenRepo.findByUserUuid(userUuid);
+            if (refreshTokens.size() > 4) {
+                refreshTokenRepo.deleteByRefreshToken(refreshTokens.iterator().next().getRefreshToken());
+            }
+        });
+    }
+
+    public AuthenticationResponse signin(SigninRequest req) throws ExecutionException, InterruptedException {
+        this.authenticateUser(req.getEmail(), req.getPassword());
 
         UserEntity user = userRepo.findByEmail(req.getEmail()).orElseThrow();
 
-//        refreshTokenService.deleteAllRefreshTokensForUser(user.getUuid());
+        CompletableFuture ifNeededdeleteRefreshTokenFuture = ifNeededdeleteRefreshTokenFuture(user.getUuid());
+        CompletableFuture<String> refreshTokenFuture = CompletableFuture.supplyAsync(() -> refreshTokenService.generateRefreshToken(user.getUuid()));
 
-        Collection<RefreshTokenEntity> refreshTokens = refreshTokenRepo.findByUserUuid(user.getUuid());
-        if (refreshTokens.size() > 4) {
-            refreshTokenRepo.deleteByRefreshToken(refreshTokens.iterator().next().getRefreshToken());
-        }
+        CompletableFuture<String> refreshToken = ifNeededdeleteRefreshTokenFuture.thenCombine(refreshTokenFuture, (aVoid, refreshTokenFromFuture) -> refreshTokenFromFuture);
 
         String jwt = jwtService.generateToken(user);
 
-        String refreshToken = refreshTokenService.generateRefreshToken(user.getUuid());
         return AuthenticationResponse.builder()
                 .token(jwt)
-                .refreshToken(refreshToken)
+                .refreshToken(refreshToken.get())
                 .build();
     }
 }

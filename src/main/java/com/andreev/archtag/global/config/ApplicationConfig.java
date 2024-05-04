@@ -3,8 +3,11 @@ package com.andreev.archtag.global.config;
 import com.andreev.archtag.user.services.authentication.UserDetailsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -20,6 +23,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 public class ApplicationConfig {
 
     private final UserDetailsService userDetailsService;
+    Logger logger = LoggerFactory.getLogger(ApplicationConfig.class);
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
@@ -42,5 +46,17 @@ public class ApplicationConfig {
     @Bean
     public ObjectMapper objectMapper() {
         return new ObjectMapper();
+    }
+
+    @Bean
+    public ThreadPoolTaskExecutor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(500);
+        executor.setThreadNamePrefix("MyAsyncThread-");
+        executor.setRejectedExecutionHandler((r, executor1) -> logger.warn("Task rejected, thread pool is full and queue is also full"));
+        executor.initialize();
+        return executor;
     }
 }
