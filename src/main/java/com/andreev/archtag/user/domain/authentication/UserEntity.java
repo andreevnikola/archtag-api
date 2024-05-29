@@ -39,6 +39,16 @@ public class UserEntity implements UserDetails {
     @Column(name = "is_banned")
     private Boolean isBanned;
 
+    @Column(name = "is_verified")
+    private Boolean isVerified;
+
+    public boolean getIsVerified() {
+        if (this.isVerified == null) {
+            return false;
+        }
+        return this.isVerified;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(role.name()));

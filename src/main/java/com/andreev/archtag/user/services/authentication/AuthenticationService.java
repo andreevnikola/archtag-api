@@ -9,6 +9,7 @@ import com.andreev.archtag.user.dto.authentication.SigninRequest;
 import com.andreev.archtag.user.repositories.authentication.RefreshTokenRepository;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -38,12 +39,17 @@ public class AuthenticationService {
                 .email(req.getEmail())
                 .password(passwordEncoder.encode(req.getPassword()))
                 .role(Role.USER)
+                .isVerified(false)
                 .isBanned(false)
                 .build();
 
         CompletableFuture saveUserFuture = CompletableFuture.runAsync(() -> userRepo.save(user));
         CompletableFuture<String> refreshTokenFuture = CompletableFuture.supplyAsync(() -> refreshTokenService.generateRefreshToken(user.getUuid()));
-        CompletableFuture<String> refreshTokenCombinedFutued = saveUserFuture.thenCombine(refreshTokenFuture, (aVoid, refreshTokenFromFuture) -> refreshTokenFromFuture);
+        CompletableFuture<String> refreshTokenCombinedFutued = saveUserFuture.thenCombine(refreshTokenFuture, (aVoid, refreshTokenFromFuture) -> refreshTokenFromFuture).exceptionally(throwable -> {
+            if (throwable.getClass().equals(DataIntegrityViolationException.class)) {
+                throw new DataIntegrityViolationException("Account with this email already exists!");
+            } else throw new RuntimeException("Unable to save user to database!");
+        });
 
         String jwt = jwtService.generateToken(user);
 
@@ -74,7 +80,7 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse signin(SigninRequest req) throws ExecutionException, InterruptedException {
-        this.authenticateUser(req.getEmail(), req.getPassword());
+        CompletableFuture authenticationFuture = this.authenticateUser(req.getEmail(), req.getPassword());
 
         UserEntity user = userRepo.findByEmail(req.getEmail()).orElseThrow();
 
@@ -84,6 +90,8 @@ public class AuthenticationService {
         CompletableFuture<String> refreshToken = ifNeededdeleteRefreshTokenFuture.thenCombine(refreshTokenFuture, (aVoid, refreshTokenFromFuture) -> refreshTokenFromFuture);
 
         String jwt = jwtService.generateToken(user);
+
+        authenticationFuture.get();
 
         return AuthenticationResponse.builder()
                 .token(jwt)

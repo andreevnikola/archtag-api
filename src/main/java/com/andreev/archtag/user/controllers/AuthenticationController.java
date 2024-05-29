@@ -15,10 +15,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -54,10 +54,14 @@ public class AuthenticationController {
         try {
             AuthenticationResponse response = authService.signin(req);
             return ResponseEntity.ok(response);
-        } catch (BadCredentialsException e) {
-            throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.");
+        } catch (ExecutionException e) {
+            if (e.getCause().getClass().equals(BadCredentialsException.class)) {
+                throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.");
+            } else {
+                throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR);
+            }
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            e.printStackTrace();
             throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

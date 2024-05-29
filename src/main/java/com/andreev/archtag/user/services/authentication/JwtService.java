@@ -62,7 +62,7 @@ public class JwtService {
                 .setClaims(extraClaims)
                 .setSubject(userEntityDetails.getUuid())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 5))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * Integer.valueOf(configUtility.getProperty("authentication.token-expiration"))))
                 .claim("email", userEntityDetails.getEmail())
                 .claim("firstname", userEntityDetails.getFirstname())
                 .claim("lastname", userEntityDetails.getLastname())
