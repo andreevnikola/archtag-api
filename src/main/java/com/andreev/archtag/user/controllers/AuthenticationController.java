@@ -8,6 +8,7 @@ import com.andreev.archtag.user.dto.authentication.*;
 import com.andreev.archtag.user.services.authentication.UserDetailsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -32,19 +33,13 @@ public class AuthenticationController {
 
     Logger logger = LoggerFactory.getLogger(AuthenticationController.class);
 
+    @SneakyThrows
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<AuthenticationResponse> register(
             @Valid @RequestBody RegisterRequest req
     ) {
-        try {
-            return ResponseEntity.ok(authService.register(req));
-        } catch (DataIntegrityViolationException e) {
-            throw new ApiRequestException(HttpStatus.CONFLICT, "Акаунт с тази електронна поща вече съществува!");
-        } catch (Exception e) {
-            logger.error(e.getMessage());
-            throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        return ResponseEntity.ok(authService.register(req));
     }
 
     @PostMapping("/signin")
