@@ -17,6 +17,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -85,23 +86,27 @@ public class AuthenticationService {
         });
     }
 
-    public AuthenticationResponse signin(SigninRequest req) throws ExecutionException, InterruptedException {
-        CompletableFuture authenticationFuture = this.authenticateUser(req.getEmail(), req.getPassword());
+    public Mono<AuthenticationResponse> signin(SigninRequest req) {
+        CompletableFuture<Void> authenticationFuture = this.authenticateUser(req.getEmail(), req.getPassword());
 
         UserEntity user = userRepo.findByEmail(req.getEmail()).orElseThrow();
 
-        CompletableFuture ifNeededdeleteRefreshTokenFuture = ifNeededdeleteRefreshTokenFuture(user.getUuid());
+        CompletableFuture<Void> ifNeededdeleteRefreshTokenFuture = ifNeededdeleteRefreshTokenFuture(user.getUuid());
         CompletableFuture<String> refreshTokenFuture = CompletableFuture.supplyAsync(() -> refreshTokenService.generateRefreshToken(user.getUuid()));
 
         CompletableFuture<String> refreshToken = ifNeededdeleteRefreshTokenFuture.thenCombine(refreshTokenFuture, (aVoid, refreshTokenFromFuture) -> refreshTokenFromFuture);
 
         String jwt = jwtService.generateToken(user);
 
-        authenticationFuture.get();
+        CompletableFuture<AuthenticationResponse> response = authenticationFuture.thenCombineAsync(refreshToken,
+                (aVoid, refreshTokenValue) -> {
+                    return AuthenticationResponse.builder()
+                            .token(jwt)
+                            .refreshToken(refreshTokenValue)
+                            .build();
+                }
+        );
 
-        return AuthenticationResponse.builder()
-                .token(jwt)
-                .refreshToken(refreshToken.get())
-                .build();
+        return Mono.fromFuture(response);
     }
 }

@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
@@ -43,22 +44,15 @@ public class AuthenticationController {
     }
 
     @PostMapping("/signin")
-    public ResponseEntity<AuthenticationResponse> signin(
+    public Mono<ResponseEntity<AuthenticationResponse>> signin(
             @Valid @RequestBody SigninRequest req
     ) {
-        try {
-            AuthenticationResponse response = authService.signin(req);
-            return ResponseEntity.ok(response);
-        } catch (ExecutionException e) {
-            if (e.getCause().getClass().equals(BadCredentialsException.class)) {
-                throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.");
-            } else {
-                throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        Mono<AuthenticationResponse> responseMono = authService.signin(req);
+
+        return responseMono.map(ResponseEntity::ok)
+                .onErrorMap(BadCredentialsException.class, e ->
+                    new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.")
+                );
     }
 
     @PostMapping("/revalidate")

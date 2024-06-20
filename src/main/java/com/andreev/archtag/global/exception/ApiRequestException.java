@@ -1,7 +1,9 @@
 package com.andreev.archtag.global.exception;
 
 import lombok.Getter;
+import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 @Getter
 public class ApiRequestException extends RuntimeException {
@@ -14,7 +16,6 @@ public class ApiRequestException extends RuntimeException {
 
     public ApiRequestException(String message) {
         super(message);
-        this.status = HttpStatus.INTERNAL_SERVER_ERROR;
     }
 
     public ApiRequestException(HttpStatus status, String message) {
@@ -25,5 +26,9 @@ public class ApiRequestException extends RuntimeException {
     public ApiRequestException(HttpStatus status, String message, Throwable cause) {
         super(message, cause);
         this.status = status;
+    }
+
+    public ResponseEntity<ApiException> ExceptionAsResponse() {
+        return ResponseEntity.status(this.status).body(new ApiException(this.getMessage(), this.getCause(), this.getStatus()));
     }
 }
