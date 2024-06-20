@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.util.Collection;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -115,12 +116,38 @@ public class AuthenticationService {
             return false;
         }
 
+        final String verificationCode = UUID.randomUUID().toString();
+        userRepo.setVerificationCodeByEmail(email, verificationCode);
+
         emailService.send(
                 email,
                 "Потвърдете имейла си",
-                configUtility.getProperty("webapp.url") + "/auth/verify-email"
+                configUtility.getProperty("webapp.url") + "/auth/verify-email/" + verificationCode
         );
 
+        return true;
+    }
+
+    public boolean verifyEmail(String code) {
+        String email = authenticationInfo.getUserEntity().getEmail();
+
+        UserEntity user = userRepo.findByEmail(email).orElseThrow();
+        if (user.getIsVerified()) {
+            return false;
+        }
+
+        if (user.getVerificationCode() == null) {
+            throw new IllegalArgumentException("No verification code found.");
+        }
+
+        System.out.println("USER: ");
+        System.out.println(user.toString());
+
+        if (!user.getVerificationCode().equals(code)) {
+            throw new IllegalArgumentException("Invalid verification code.");
+        }
+
+        userRepo.setVerifiedByEmail(true, email);
         return true;
     }
 }

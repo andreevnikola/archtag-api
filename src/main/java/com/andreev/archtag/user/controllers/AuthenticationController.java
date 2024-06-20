@@ -105,4 +105,23 @@ public class AuthenticationController {
             throw new ApiRequestException(HttpStatus.BAD_REQUEST, "The user with this email was not found.");
         }
     }
+
+    @GetMapping("/verify-email/{code}")
+    public ResponseEntity<Void> verifyEmail(
+            @PathVariable String code
+    ) {
+        try {
+            final boolean isVerified = authService.verifyEmail(code);
+
+            if (!isVerified) {
+                throw new ApiRequestException(HttpStatus.CONFLICT, "Verification has already been done.");
+            }
+
+            return ResponseEntity.ok().build();
+        } catch (NoSuchElementException e) {
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "The user with this email was not found.");
+        } catch (IllegalArgumentException e) {
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Invalid verification code.");
+        }
+    }
 }

@@ -42,6 +42,9 @@ public class UserEntity implements UserDetails {
     @Column(name = "is_verified")
     private Boolean isVerified;
 
+    @Column(name = "verification_code")
+    private String verificationCode;
+
     public boolean getIsVerified() {
         if (this.isVerified == null) {
             return false;

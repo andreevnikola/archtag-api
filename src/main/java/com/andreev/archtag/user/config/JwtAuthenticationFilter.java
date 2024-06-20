@@ -26,7 +26,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final String[] UNVALIDATED_ROUTES = {
-            "/api/auth/resend-verification"
+            "/api/auth/resend-verification",
+            "/api/auth/verify-email",
     };
 
     @Override
