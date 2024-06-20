@@ -1,6 +1,7 @@
 package com.andreev.archtag.user.services.authentication;
 
-import com.andreev.archtag.global.exception.ApiRequestException;
+import com.andreev.archtag.global.lib.AuthenticationInfo;
+import com.andreev.archtag.global.services.EmailService;
 import com.andreev.archtag.user.domain.authentication.RefreshTokenEntity;
 import com.andreev.archtag.user.domain.authentication.Role;
 import com.andreev.archtag.user.domain.authentication.UserEntity;
@@ -10,20 +11,16 @@ import com.andreev.archtag.user.dto.authentication.SigninRequest;
 import com.andreev.archtag.user.repositories.authentication.RefreshTokenRepository;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +32,10 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
+    private final EmailService emailService;
+
+    @Autowired
+    private final AuthenticationInfo authenticationInfo;
 
     public Mono<AuthenticationResponse> register(RegisterRequest req) {
         UserEntity user = UserEntity.builder()
@@ -103,5 +104,22 @@ public class AuthenticationService {
         );
 
         return Mono.fromFuture(response);
+    }
+
+    public boolean resendVerification() {
+        String email = authenticationInfo.getUserEntity().getEmail();
+
+        UserEntity user = userRepo.findByEmail(email).orElseThrow();
+        if (user.getIsVerified()) {
+            return false;
+        }
+
+        emailService.send(
+                email,
+                "Потвърдете имейла си",
+         ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString() + "/verify-email"
+        );
+
+        return true;
     }
 }

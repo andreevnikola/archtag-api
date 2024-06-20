@@ -1,27 +1,23 @@
 package com.andreev.archtag.user.controllers;
 
 import com.andreev.archtag.global.exception.ApiRequestException;
+import com.andreev.archtag.user.dto.authentication.*;
 import com.andreev.archtag.user.services.authentication.AuthenticationService;
 import com.andreev.archtag.user.services.authentication.JwtService;
 import com.andreev.archtag.user.services.authentication.RefreshTokenService;
-import com.andreev.archtag.user.dto.authentication.*;
 import com.andreev.archtag.user.services.authentication.UserDetailsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationTrustResolver;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 import java.util.NoSuchElementException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -40,11 +36,11 @@ public class AuthenticationController {
     public Mono<ResponseEntity<AuthenticationResponse>> register(
             @Valid @RequestBody RegisterRequest req
     ) {
-       Mono<AuthenticationResponse> responseMono = authService.register(req);
+        Mono<AuthenticationResponse> responseMono = authService.register(req);
 
         return responseMono.map(ResponseEntity::ok)
                 .onErrorMap(DataIntegrityViolationException.class, e ->
-                    new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този email вече съществува!")
+                        new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този email вече съществува!")
                 );
     }
 
@@ -56,7 +52,7 @@ public class AuthenticationController {
 
         return responseMono.map(ResponseEntity::ok)
                 .onErrorMap(BadCredentialsException.class, e ->
-                    new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.")
+                        new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.")
                 );
     }
 
@@ -90,5 +86,23 @@ public class AuthenticationController {
         }
 
         return ResponseEntity.ok(userDetailsService.getUserByToken(token));
+    }
+
+    @GetMapping("/resend-verification")
+    public ResponseEntity<Void> resendVerification(
+    ) {
+        try {
+
+            boolean hasBeenAllreadySent = authService.resendVerification();
+
+            if (!hasBeenAllreadySent) {
+                throw new ApiRequestException(HttpStatus.CONFLICT, "Verification email has been sent already.");
+            }
+
+            return ResponseEntity.ok().build();
+
+        } catch (NoSuchElementException e) {
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "The user with this email was not found.");
+        }
     }
 }
