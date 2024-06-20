@@ -36,8 +36,7 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
 
-    //TODO: THis must be refactored one day
-    public AuthenticationResponse register(RegisterRequest req) throws ExecutionException, InterruptedException {
+    public Mono<AuthenticationResponse> register(RegisterRequest req) {
         UserEntity user = UserEntity.builder()
                 .firstname(req.getFirstname())
                 .lastname(req.getLastname())
@@ -48,23 +47,18 @@ public class AuthenticationService {
                 .isBanned(false)
                 .build();
 
-        CompletableFuture saveUserFuture = CompletableFuture.runAsync(() -> userRepo.save(user));
+        CompletableFuture<Void> saveUserFuture = CompletableFuture.runAsync(() -> userRepo.save(user));
         CompletableFuture<String> refreshTokenFuture = CompletableFuture.supplyAsync(() -> refreshTokenService.generateRefreshToken(user.getUuid()));
-        CompletableFuture<String> refreshTokenCombinedFutued = saveUserFuture.thenCombine(refreshTokenFuture, (aVoid, refreshTokenFromFuture) -> refreshTokenFromFuture).exceptionally(throwable -> {
-            if (throwable.getClass().equals(DataIntegrityViolationException.class) || throwable.getClass().equals(CompletionException.class)) {
-                throw new ApiRequestException(HttpStatus.CONFLICT, "Потребител с този email вече съществува!");
-            } else {
-                System.out.println(throwable.getClass());
-                throw new RuntimeException("Unable to save user to database!");
-            }
-        });
+        CompletableFuture<String> refreshTokenCombinedFuture = saveUserFuture.thenCombine(refreshTokenFuture, (aVoid, refreshTokenFromFuture) -> refreshTokenFromFuture);
 
         String jwt = jwtService.generateToken(user);
 
-        return AuthenticationResponse.builder()
+        CompletableFuture<AuthenticationResponse> response = refreshTokenCombinedFuture.thenApplyAsync(refreshTokenCombined ->  AuthenticationResponse.builder()
                 .token(jwt)
-                .refreshToken(refreshTokenCombinedFutued.get())
-                .build();
+                .refreshToken(refreshTokenCombined)
+                .build());
+
+        return Mono.fromFuture(response);
     }
 
     private CompletableFuture authenticateUser(String email, String password) {

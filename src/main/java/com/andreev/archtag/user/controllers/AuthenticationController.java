@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationTrustResolver;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
@@ -34,14 +35,17 @@ public class AuthenticationController {
 
     Logger logger = LoggerFactory.getLogger(AuthenticationController.class);
 
-    //TODO: This must be refactored one day
-    @SneakyThrows
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<AuthenticationResponse> register(
+    public Mono<ResponseEntity<AuthenticationResponse>> register(
             @Valid @RequestBody RegisterRequest req
     ) {
-        return ResponseEntity.ok(authService.register(req));
+       Mono<AuthenticationResponse> responseMono = authService.register(req);
+
+        return responseMono.map(ResponseEntity::ok)
+                .onErrorMap(DataIntegrityViolationException.class, e ->
+                    new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този email вече съществува!")
+                );
     }
 
     @PostMapping("/signin")
@@ -81,7 +85,7 @@ public class AuthenticationController {
             @PathVariable String token
     ) {
 
-        if (jwtService.isTokenValid(token) == false) {
+        if (!jwtService.isTokenValid(token)) {
             throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Invalid token.");
         }
 
