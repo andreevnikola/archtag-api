@@ -2,6 +2,7 @@ package com.andreev.archtag.user.services.authentication;
 
 import com.andreev.archtag.global.lib.AuthenticationInfo;
 import com.andreev.archtag.global.services.EmailService;
+import com.andreev.archtag.global.utils.ConfigUtility;
 import com.andreev.archtag.user.domain.authentication.RefreshTokenEntity;
 import com.andreev.archtag.user.domain.authentication.Role;
 import com.andreev.archtag.user.domain.authentication.UserEntity;
@@ -16,10 +17,9 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
-import java.util.*;
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -33,6 +33,7 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
     private final EmailService emailService;
+    private final ConfigUtility configUtility;
 
     @Autowired
     private final AuthenticationInfo authenticationInfo;
@@ -54,7 +55,7 @@ public class AuthenticationService {
 
         String jwt = jwtService.generateToken(user);
 
-        CompletableFuture<AuthenticationResponse> response = refreshTokenCombinedFuture.thenApplyAsync(refreshTokenCombined ->  AuthenticationResponse.builder()
+        CompletableFuture<AuthenticationResponse> response = refreshTokenCombinedFuture.thenApplyAsync(refreshTokenCombined -> AuthenticationResponse.builder()
                 .token(jwt)
                 .refreshToken(refreshTokenCombined)
                 .build());
@@ -117,7 +118,7 @@ public class AuthenticationService {
         emailService.send(
                 email,
                 "Потвърдете имейла си",
-         ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString() + "/verify-email"
+                configUtility.getProperty("webapp.url") + "/auth/verify-email"
         );
 
         return true;

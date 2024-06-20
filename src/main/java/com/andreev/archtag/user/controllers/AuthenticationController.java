@@ -93,10 +93,10 @@ public class AuthenticationController {
     ) {
         try {
 
-            boolean hasBeenAllreadySent = authService.resendVerification();
+            boolean hasBeenAllreadyValidated = authService.resendVerification();
 
-            if (!hasBeenAllreadySent) {
-                throw new ApiRequestException(HttpStatus.CONFLICT, "Verification email has been sent already.");
+            if (!hasBeenAllreadyValidated) {
+                throw new ApiRequestException(HttpStatus.CONFLICT, "Verification has already been done.");
             }
 
             return ResponseEntity.ok().build();
