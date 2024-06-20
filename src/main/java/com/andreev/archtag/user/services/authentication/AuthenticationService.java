@@ -36,6 +36,7 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
 
+    //TODO: THis must be refactored one day
     public AuthenticationResponse register(RegisterRequest req) throws ExecutionException, InterruptedException {
         UserEntity user = UserEntity.builder()
                 .firstname(req.getFirstname())

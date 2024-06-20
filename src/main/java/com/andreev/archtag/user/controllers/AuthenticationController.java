@@ -34,6 +34,7 @@ public class AuthenticationController {
 
     Logger logger = LoggerFactory.getLogger(AuthenticationController.class);
 
+    //TODO: This must be refactored one day
     @SneakyThrows
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -58,11 +59,9 @@ public class AuthenticationController {
     @PostMapping("/revalidate")
     public ResponseEntity<RevalidateJwtResponse> revalidateToken(
             @RequestBody RevalidateJwtRequest req
-    ) {
+    ) throws Exception {
         try {
-            final CompletableFuture<String> jwtFuture = refreshTokenService.revalidateJwt(req.getRefreshToken());
-
-            final String jwt = jwtFuture.get();
+            final String jwt = refreshTokenService.revalidateJwt(req.getRefreshToken());
 
             final RevalidateJwtResponse jwtResponse = RevalidateJwtResponse.builder()
                     .token(jwt)
@@ -71,10 +70,9 @@ public class AuthenticationController {
             return ResponseEntity.ok(jwtResponse);
 
         } catch (NoSuchElementException e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "The refresh token was not found.");
         } catch (Exception e) {
-            logger.error(e.getMessage());
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
