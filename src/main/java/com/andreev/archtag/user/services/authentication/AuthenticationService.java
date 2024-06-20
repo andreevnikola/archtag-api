@@ -17,6 +17,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -35,7 +36,7 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
 
-    public AuthenticationResponse register(RegisterRequest req) throws ExecutionException, InterruptedException {
+    public Mono<AuthenticationResponse> register(RegisterRequest req) {
         UserEntity user = UserEntity.builder()
                 .firstname(req.getFirstname())
                 .lastname(req.getLastname())
@@ -46,23 +47,18 @@ public class AuthenticationService {
                 .isBanned(false)
                 .build();
 
-        CompletableFuture saveUserFuture = CompletableFuture.runAsync(() -> userRepo.save(user));
+        CompletableFuture<Void> saveUserFuture = CompletableFuture.runAsync(() -> userRepo.save(user));
         CompletableFuture<String> refreshTokenFuture = CompletableFuture.supplyAsync(() -> refreshTokenService.generateRefreshToken(user.getUuid()));
-        CompletableFuture<String> refreshTokenCombinedFutued = saveUserFuture.thenCombine(refreshTokenFuture, (aVoid, refreshTokenFromFuture) -> refreshTokenFromFuture).exceptionally(throwable -> {
-            if (throwable.getClass().equals(DataIntegrityViolationException.class) || throwable.getClass().equals(CompletionException.class)) {
-                throw new ApiRequestException(HttpStatus.CONFLICT, "Потребител с този email вече съществува!");
-            } else {
-                System.out.println(throwable.getClass());
-                throw new RuntimeException("Unable to save user to database!");
-            }
-        });
+        CompletableFuture<String> refreshTokenCombinedFuture = saveUserFuture.thenCombine(refreshTokenFuture, (aVoid, refreshTokenFromFuture) -> refreshTokenFromFuture);
 
         String jwt = jwtService.generateToken(user);
 
-        return AuthenticationResponse.builder()
+        CompletableFuture<AuthenticationResponse> response = refreshTokenCombinedFuture.thenApplyAsync(refreshTokenCombined ->  AuthenticationResponse.builder()
                 .token(jwt)
-                .refreshToken(refreshTokenCombinedFutued.get())
-                .build();
+                .refreshToken(refreshTokenCombined)
+                .build());
+
+        return Mono.fromFuture(response);
     }
 
     private CompletableFuture authenticateUser(String email, String password) {
@@ -85,23 +81,27 @@ public class AuthenticationService {
         });
     }
 
-    public AuthenticationResponse signin(SigninRequest req) throws ExecutionException, InterruptedException {
-        CompletableFuture authenticationFuture = this.authenticateUser(req.getEmail(), req.getPassword());
+    public Mono<AuthenticationResponse> signin(SigninRequest req) {
+        CompletableFuture<Void> authenticationFuture = this.authenticateUser(req.getEmail(), req.getPassword());
 
         UserEntity user = userRepo.findByEmail(req.getEmail()).orElseThrow();
 
-        CompletableFuture ifNeededdeleteRefreshTokenFuture = ifNeededdeleteRefreshTokenFuture(user.getUuid());
+        CompletableFuture<Void> ifNeededdeleteRefreshTokenFuture = ifNeededdeleteRefreshTokenFuture(user.getUuid());
         CompletableFuture<String> refreshTokenFuture = CompletableFuture.supplyAsync(() -> refreshTokenService.generateRefreshToken(user.getUuid()));
 
         CompletableFuture<String> refreshToken = ifNeededdeleteRefreshTokenFuture.thenCombine(refreshTokenFuture, (aVoid, refreshTokenFromFuture) -> refreshTokenFromFuture);
 
         String jwt = jwtService.generateToken(user);
 
-        authenticationFuture.get();
+        CompletableFuture<AuthenticationResponse> response = authenticationFuture.thenCombineAsync(refreshToken,
+                (aVoid, refreshTokenValue) -> {
+                    return AuthenticationResponse.builder()
+                            .token(jwt)
+                            .refreshToken(refreshTokenValue)
+                            .build();
+                }
+        );
 
-        return AuthenticationResponse.builder()
-                .token(jwt)
-                .refreshToken(refreshToken.get())
-                .build();
+        return Mono.fromFuture(response);
     }
 }

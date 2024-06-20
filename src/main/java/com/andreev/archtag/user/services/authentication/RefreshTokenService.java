@@ -27,12 +27,11 @@ public class RefreshTokenService {
         return refreshTokenRepository.save(refreshTokenEntity).getRefreshToken();
     }
 
-    @Async
-    public CompletableFuture<String> revalidateJwt(String refreshToken) throws Exception {
+    public String revalidateJwt(String refreshToken) throws Exception {
         RefreshTokenEntity refreshTokenEntity = refreshTokenRepository.findByRefreshToken(refreshToken).orElseThrow();
         if (refreshTokenEntity.getValidUntil().before(new Date())) throw new Exception("Refresh token has expired");
         UserEntity user = userRepository.findByUuid(refreshTokenEntity.getUserUuid()).orElseThrow();
-        return CompletableFuture.completedFuture(jwtService.generateToken(user));
+        return jwtService.generateToken(user);
     }
 
     public void deleteAllRefreshTokensForUser(String userUuid) {

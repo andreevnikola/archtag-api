@@ -14,8 +14,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationTrustResolver;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
@@ -33,42 +35,37 @@ public class AuthenticationController {
 
     Logger logger = LoggerFactory.getLogger(AuthenticationController.class);
 
-    @SneakyThrows
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<AuthenticationResponse> register(
+    public Mono<ResponseEntity<AuthenticationResponse>> register(
             @Valid @RequestBody RegisterRequest req
     ) {
-        return ResponseEntity.ok(authService.register(req));
+       Mono<AuthenticationResponse> responseMono = authService.register(req);
+
+        return responseMono.map(ResponseEntity::ok)
+                .onErrorMap(DataIntegrityViolationException.class, e ->
+                    new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този email вече съществува!")
+                );
     }
 
     @PostMapping("/signin")
-    public ResponseEntity<AuthenticationResponse> signin(
+    public Mono<ResponseEntity<AuthenticationResponse>> signin(
             @Valid @RequestBody SigninRequest req
     ) {
-        try {
-            AuthenticationResponse response = authService.signin(req);
-            return ResponseEntity.ok(response);
-        } catch (ExecutionException e) {
-            if (e.getCause().getClass().equals(BadCredentialsException.class)) {
-                throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.");
-            } else {
-                throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        Mono<AuthenticationResponse> responseMono = authService.signin(req);
+
+        return responseMono.map(ResponseEntity::ok)
+                .onErrorMap(BadCredentialsException.class, e ->
+                    new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.")
+                );
     }
 
     @PostMapping("/revalidate")
     public ResponseEntity<RevalidateJwtResponse> revalidateToken(
             @RequestBody RevalidateJwtRequest req
-    ) {
+    ) throws Exception {
         try {
-            final CompletableFuture<String> jwtFuture = refreshTokenService.revalidateJwt(req.getRefreshToken());
-
-            final String jwt = jwtFuture.get();
+            final String jwt = refreshTokenService.revalidateJwt(req.getRefreshToken());
 
             final RevalidateJwtResponse jwtResponse = RevalidateJwtResponse.builder()
                     .token(jwt)
@@ -77,10 +74,9 @@ public class AuthenticationController {
             return ResponseEntity.ok(jwtResponse);
 
         } catch (NoSuchElementException e) {
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "The refresh token was not found.");
         } catch (Exception e) {
-            logger.error(e.getMessage());
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
         }
     }
 
@@ -89,7 +85,7 @@ public class AuthenticationController {
             @PathVariable String token
     ) {
 
-        if (jwtService.isTokenValid(token) == false) {
+        if (!jwtService.isTokenValid(token)) {
             throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Invalid token.");
         }
 
