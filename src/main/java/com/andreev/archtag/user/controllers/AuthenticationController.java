@@ -14,14 +14,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationTrustResolver;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 import java.util.NoSuchElementException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -40,11 +37,11 @@ public class AuthenticationController {
     public Mono<ResponseEntity<AuthenticationResponse>> register(
             @Valid @RequestBody RegisterRequest req
     ) {
-       Mono<AuthenticationResponse> responseMono = authService.register(req);
+        Mono<AuthenticationResponse> responseMono = authService.register(req);
 
         return responseMono.map(ResponseEntity::ok)
                 .onErrorMap(DataIntegrityViolationException.class, e ->
-                    new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този email вече съществува!")
+                        new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този email вече съществува!")
                 );
     }
 
@@ -56,7 +53,7 @@ public class AuthenticationController {
 
         return responseMono.map(ResponseEntity::ok)
                 .onErrorMap(BadCredentialsException.class, e ->
-                    new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.")
+                        new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.")
                 );
     }
 
@@ -90,5 +87,17 @@ public class AuthenticationController {
         }
 
         return ResponseEntity.ok(userDetailsService.getUserByToken(token));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.ok("Password reset email sent.");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok("Password has been reset successfully.");
     }
 }

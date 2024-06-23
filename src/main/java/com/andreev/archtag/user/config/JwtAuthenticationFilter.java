@@ -16,7 +16,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -36,7 +35,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String jwt = authHeader.substring(7);
         final String uuid = jwtService.extractUuid(jwt);
-
 
         if (uuid != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserEntity userEntityDetails = this.userDetailsService.getUserByUuid(uuid);

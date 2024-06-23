@@ -4,11 +4,10 @@ import com.andreev.archtag.global.exception.ApiRequestException;
 import com.andreev.archtag.user.domain.authentication.RefreshTokenEntity;
 import com.andreev.archtag.user.domain.authentication.Role;
 import com.andreev.archtag.user.domain.authentication.UserEntity;
-import com.andreev.archtag.user.dto.authentication.AuthenticationResponse;
-import com.andreev.archtag.user.dto.authentication.RegisterRequest;
-import com.andreev.archtag.user.dto.authentication.SigninRequest;
+import com.andreev.archtag.user.dto.authentication.*;
 import com.andreev.archtag.user.repositories.authentication.RefreshTokenRepository;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
+import com.andreev.archtag.global.services.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -35,6 +34,7 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
+    private final EmailService emailService;
 
     public Mono<AuthenticationResponse> register(RegisterRequest req) {
         UserEntity user = UserEntity.builder()
@@ -103,5 +103,25 @@ public class AuthenticationService {
         );
 
         return Mono.fromFuture(response);
+    }
+
+    public void forgotPassword(ForgotPasswordRequest request) {
+        UserEntity user = userRepo.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "No user found with this email address."));
+
+        String resetToken = jwtService.generateToken(user);
+        // Send the reset token via email
+        emailService.send(user.getEmail(), "Password Reset Request",
+                "To reset your password, click the link below:\n" +
+                        "http://your-domain.com/reset-password?token=" + resetToken);
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        String userUuid = jwtService.extractUuid(request.getToken());
+        UserEntity user = userRepo.findByUuid(userUuid)
+                .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "Invalid token."));
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepo.save(user);
     }
 }
