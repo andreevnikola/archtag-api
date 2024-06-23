@@ -1,18 +1,19 @@
 package com.andreev.archtag.user.services.authentication;
 
+import com.andreev.archtag.global.exception.ApiRequestException;
 import com.andreev.archtag.global.lib.AuthenticationInfo;
 import com.andreev.archtag.global.services.EmailService;
 import com.andreev.archtag.global.utils.ConfigUtility;
 import com.andreev.archtag.user.domain.authentication.RefreshTokenEntity;
 import com.andreev.archtag.user.domain.authentication.Role;
 import com.andreev.archtag.user.domain.authentication.UserEntity;
-import com.andreev.archtag.user.dto.authentication.AuthenticationResponse;
-import com.andreev.archtag.user.dto.authentication.RegisterRequest;
-import com.andreev.archtag.user.dto.authentication.SigninRequest;
+import com.andreev.archtag.user.dto.authentication.*;
 import com.andreev.archtag.user.repositories.authentication.RefreshTokenRepository;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
+import com.andreev.archtag.global.services.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +23,9 @@ import reactor.core.publisher.Mono;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -149,5 +153,25 @@ public class AuthenticationService {
 
         userRepo.setVerifiedByEmail(true, email);
         return true;
+    }
+
+    public void forgotPassword(ForgotPasswordRequest request) {
+        UserEntity user = userRepo.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "No user found with this email address."));
+
+        String resetToken = jwtService.generateToken(user);
+        // Send the reset token via email
+        emailService.send(user.getEmail(), "Password Reset Request",
+                "To reset your password, click the link below:\n" +
+                        configUtility.getProperty("webapp.url") + "/reset-password?token=" + resetToken);
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        String userUuid = jwtService.extractUuid(request.getToken());
+        UserEntity user = userRepo.findByUuid(userUuid)
+                .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "Invalid token."));
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepo.save(user);
     }
 }
