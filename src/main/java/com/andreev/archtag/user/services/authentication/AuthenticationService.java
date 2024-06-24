@@ -163,7 +163,7 @@ public class AuthenticationService {
         // Send the reset token via email
         emailService.send(user.getEmail(), "Password Reset Request",
                 "To reset your password, click the link below:\n" +
-                        configUtility.getProperty("webapp.url") + "/reset-password?token=" + resetToken);
+                        configUtility.getProperty("webapp.url") + "/auth/reset-password?token=" + resetToken);
     }
 
     public void resetPassword(ResetPasswordRequest request) {

@@ -127,13 +127,25 @@ public class AuthenticationController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        authService.forgotPassword(request);
-        return ResponseEntity.ok("Password reset email sent.");
+        try {
+            authService.forgotPassword(request);
+            return ResponseEntity.ok("Password reset email sent.");
+        } catch (ApiRequestException e) {
+            return ResponseEntity.status(e.getStatus()).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
+        }
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request);
-        return ResponseEntity.ok("Password has been reset successfully.");
+        try {
+            authService.resetPassword(request);
+            return ResponseEntity.ok("Password has been reset successfully.");
+        } catch (ApiRequestException e) {
+            return ResponseEntity.status(e.getStatus()).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
+        }
     }
 }
