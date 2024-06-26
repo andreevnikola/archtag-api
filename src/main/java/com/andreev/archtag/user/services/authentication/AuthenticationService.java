@@ -155,23 +155,31 @@ public class AuthenticationService {
         return true;
     }
 
-    public void forgotPassword(ForgotPasswordRequest request) {
+    public ForgottenPassResponse forgotPassword(ForgotPasswordRequest request) {
         UserEntity user = userRepo.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "No user found with this email address."));
 
         String resetToken = jwtService.generateToken(user);
-        // Send the reset token via email
-        emailService.send(user.getEmail(), "Password Reset Request",
-                "To reset your password, click the link below:\n" +
-                        configUtility.getProperty("webapp.url") + "/auth/reset-password?token=" + resetToken);
+        try {
+            // Send the reset token via email
+            emailService.send(user.getEmail(), "Password Reset Request",
+                    "To reset your password, click the link below:\n" +
+                            configUtility.getProperty("webapp.url") + "/auth/reset-password?token=" + resetToken);
+            return new ForgottenPassResponse(true, "Password reset email sent.");
+        } catch (Exception e) {
+            throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send email.");
+        }
     }
 
-    public void resetPassword(ResetPasswordRequest request) {
+    public ForgottenPassResponse resetPassword(ResetPasswordRequest request) {
         String userUuid = jwtService.extractUuid(request.getToken());
         UserEntity user = userRepo.findByUuid(userUuid)
                 .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "Invalid token."));
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepo.save(user);
+        return new ForgottenPassResponse(true, "Password has been reset successfully.");
     }
+
 }
+

@@ -126,26 +126,26 @@ public class AuthenticationController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+    public ResponseEntity<ForgottenPassResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         try {
-            authService.forgotPassword(request);
-            return ResponseEntity.ok("Password reset email sent.");
+            ForgottenPassResponse response = authService.forgotPassword(request);
+            return ResponseEntity.ok(response);
         } catch (ApiRequestException e) {
-            return ResponseEntity.status(e.getStatus()).body(e.getMessage());
+            return ResponseEntity.status(e.getStatus()).body(new ForgottenPassResponse(false, e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ForgottenPassResponse(false, "An unexpected error occurred."));
         }
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<ForgottenPassResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         try {
-            authService.resetPassword(request);
-            return ResponseEntity.ok("Password has been reset successfully.");
+            ForgottenPassResponse response = authService.resetPassword(request);
+            return ResponseEntity.ok(response);
         } catch (ApiRequestException e) {
-            return ResponseEntity.status(e.getStatus()).body(e.getMessage());
+            return ResponseEntity.status(e.getStatus()).body(new ForgottenPassResponse(false, e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ForgottenPassResponse(false, "An unexpected error occurred."));
         }
     }
 }
