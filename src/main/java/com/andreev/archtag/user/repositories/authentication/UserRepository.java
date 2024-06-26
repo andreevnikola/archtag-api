@@ -21,7 +21,7 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     @Modifying
     @Query("UPDATE UserEntity u SET u.verificationCode = :verificationCode WHERE u.email = :email")
-    void setVerificationCodeByEmail(@Param("verificationCode") String verificationCode, @Param("email") String email);
+    void setVerificationCodeByEmail(@Param("email") String email, @Param("verificationCode") String verificationCode);
 
     @Transactional
     void deleteByEmail(String email);
