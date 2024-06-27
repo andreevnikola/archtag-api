@@ -10,7 +10,6 @@ import com.andreev.archtag.user.domain.authentication.UserEntity;
 import com.andreev.archtag.user.dto.authentication.*;
 import com.andreev.archtag.user.repositories.authentication.RefreshTokenRepository;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
-import com.andreev.archtag.global.services.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,15 +17,12 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
-import java.util.Collection;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -53,44 +49,25 @@ public class AuthenticationService {
                 .role(Role.USER)
                 .isVerified(false)
                 .isBanned(false)
+                .verificationCode(generateVerificationCode())
+                .verificationCodeExpiry(LocalDateTime.now().plusHours(24))
                 .build();
 
-        CompletableFuture<Void> saveUserFuture = CompletableFuture.runAsync(() -> userRepo.save(user));
-        CompletableFuture<String> refreshTokenFuture = CompletableFuture.supplyAsync(() -> refreshTokenService.generateRefreshToken(user.getUuid()));
-        CompletableFuture<String> refreshTokenCombinedFuture = saveUserFuture.thenCombine(refreshTokenFuture, (aVoid, refreshTokenFromFuture) -> refreshTokenFromFuture);
+        userRepo.save(user);
+
+        sendVerificationEmail(user);
 
         String jwt = jwtService.generateToken(user);
+        String refreshToken = refreshTokenService.generateRefreshToken(user.getUuid());
 
-        CompletableFuture<AuthenticationResponse> response = refreshTokenCombinedFuture.thenApplyAsync(refreshTokenCombined -> AuthenticationResponse.builder()
+        return Mono.just(AuthenticationResponse.builder()
                 .token(jwt)
-                .refreshToken(refreshTokenCombined)
+                .refreshToken(refreshToken)
                 .build());
-
-        return Mono.fromFuture(response);
-    }
-
-    private CompletableFuture authenticateUser(String email, String password) {
-        return CompletableFuture.runAsync(() -> {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            email,
-                            password
-                    )
-            );
-        });
-    }
-
-    private CompletableFuture ifNeededdeleteRefreshTokenFuture(String userUuid) {
-        return CompletableFuture.runAsync(() -> {
-            Collection<RefreshTokenEntity> refreshTokens = refreshTokenRepo.findByUserUuid(userUuid);
-            if (refreshTokens.size() > 4) {
-                refreshTokenRepo.deleteByRefreshToken(refreshTokens.iterator().next().getRefreshToken());
-            }
-        });
     }
 
     public Mono<AuthenticationResponse> signin(SigninRequest req) {
-        CompletableFuture<Void> authenticationFuture = this.authenticateUser(req.getEmail(), req.getPassword());
+        CompletableFuture<Void> authenticationFuture = authenticateUser(req.getEmail(), req.getPassword());
 
         UserEntity user = userRepo.findByEmail(req.getEmail()).orElseThrow();
 
@@ -113,7 +90,6 @@ public class AuthenticationService {
         return Mono.fromFuture(response);
     }
 
-    @Transactional
     public boolean resendVerification() {
         String email = authenticationInfo.getUserEntity().getEmail();
 
@@ -122,38 +98,38 @@ public class AuthenticationService {
             return false;
         }
 
-        final String verificationCode = UUID.randomUUID().toString();
-        userRepo.setVerificationCodeByEmail(email, verificationCode);
+        final String verificationCode = generateVerificationCode();
+        user.setVerificationCode(verificationCode);
+        user.setVerificationCodeExpiry(LocalDateTime.now().plusHours(24));
+        userRepo.save(user);
 
-        emailService.send(
-                email,
-                "Потвърдете имейла си",
-                configUtility.getProperty("webapp.url") + "/auth/verify-email/" + verificationCode
-        );
+        sendVerificationEmail(user);
 
         return true;
     }
 
+    private void sendVerificationEmail(UserEntity user) {
+        String verificationUrl = configUtility.getProperty("webapp.url") + "/auth/verify-email/" + user.getVerificationCode();
+        emailService.send(user.getEmail(), "Verify Your Email", "Please verify your email by clicking the link: " + verificationUrl);
+    }
+
+    private String generateVerificationCode() {
+        return UUID.randomUUID().toString();
+    }
+
     public boolean verifyEmail(String code) {
-        String email = authenticationInfo.getUserEntity().getEmail();
-
-        UserEntity user = userRepo.findByEmail(email).orElseThrow();
+        UserEntity user = userRepo.findByVerificationCode(code)
+                .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "Invalid verification code."));
         if (user.getIsVerified()) {
-            return false;
+            throw new ApiRequestException(HttpStatus.CONFLICT, "Email is already verified.");
         }
-
-        if (user.getVerificationCode() == null) {
-            throw new IllegalArgumentException("No verification code found.");
+        if (user.getVerificationCodeExpiry().isBefore(LocalDateTime.now())) {
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Verification code has expired.");
         }
-
-        System.out.println("USER: ");
-        System.out.println(user.toString());
-
-        if (!user.getVerificationCode().equals(code)) {
-            throw new IllegalArgumentException("Invalid verification code.");
-        }
-
-        userRepo.setVerifiedByEmail(true, email);
+        user.setIsVerified(true);
+        user.setVerificationCode(null);
+        user.setVerificationCodeExpiry(null);
+        userRepo.save(user);
         return true;
     }
 
@@ -161,27 +137,48 @@ public class AuthenticationService {
         UserEntity user = userRepo.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "No user found with this email address."));
 
-        String resetToken = jwtService.generateToken(user);
-        try {
-            // Send the reset token via email
-            emailService.send(user.getEmail(), "Password Reset Request",
-                    "To reset your password, click the link below:\n" +
-                            configUtility.getProperty("webapp.url") + "/auth/reset-password?token=" + resetToken);
-            return new ForgottenPassResponse(true, "Password reset email sent.");
-        } catch (Exception e) {
-            throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to send email.");
-        }
+        user.setResetPasswordCode(generateVerificationCode());
+        user.setResetPasswordCodeExpiry(LocalDateTime.now().plusHours(24));
+        userRepo.save(user);
+
+        sendResetPasswordEmail(user);
+        return new ForgottenPassResponse(true, "Password reset email sent.");
+    }
+
+    private void sendResetPasswordEmail(UserEntity user) {
+        String resetUrl = configUtility.getProperty("webapp.url") + "/auth/reset-password?code=" + user.getResetPasswordCode();
+        emailService.send(user.getEmail(), "Password Reset Request", "To reset your password, click the link: " + resetUrl);
     }
 
     public ForgottenPassResponse resetPassword(ResetPasswordRequest request) {
-        String userUuid = jwtService.extractUuid(request.getToken());
-        UserEntity user = userRepo.findByUuid(userUuid)
-                .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "Invalid token."));
+        UserEntity user = userRepo.findByResetPasswordCode(request.getCode())
+                .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "Invalid reset code."));
+
+        if (user.getResetPasswordCodeExpiry().isBefore(LocalDateTime.now())) {
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Reset code has expired.");
+        }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setResetPasswordCode(null);
+        user.setResetPasswordCodeExpiry(null);
         userRepo.save(user);
         return new ForgottenPassResponse(true, "Password has been reset successfully.");
     }
 
-}
+    private CompletableFuture<Void> authenticateUser(String email, String password) {
+        return CompletableFuture.runAsync(() -> {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, password)
+            );
+        });
+    }
 
+    private CompletableFuture<Void> ifNeededdeleteRefreshTokenFuture(String userUuid) {
+        return CompletableFuture.runAsync(() -> {
+            List<RefreshTokenEntity> refreshTokens = refreshTokenRepo.findByUserUuid(userUuid);
+            if (refreshTokens.size() > 4) {
+                refreshTokenRepo.deleteByRefreshToken(refreshTokens.get(0).getRefreshToken());
+            }
+        });
+    }
+}

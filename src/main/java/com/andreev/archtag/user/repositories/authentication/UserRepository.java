@@ -15,6 +15,10 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     Optional<UserEntity> findByUuid(String uuid);
 
+    Optional<UserEntity> findByVerificationCode(String code);
+
+    Optional<UserEntity> findByResetPasswordCode(String code);
+
     @Modifying
     @Query("UPDATE UserEntity u SET u.isVerified = :verified WHERE u.email = :email")
     void setVerifiedByEmail(@Param("verified") boolean verified, @Param("email") String email);

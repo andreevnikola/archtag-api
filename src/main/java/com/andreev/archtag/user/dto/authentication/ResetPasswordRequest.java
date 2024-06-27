@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class ResetPasswordRequest {
 
     @NotBlank
-    private String token;
+    private String code;
 
     @NotBlank
     @Size(min = 6, max = 35)

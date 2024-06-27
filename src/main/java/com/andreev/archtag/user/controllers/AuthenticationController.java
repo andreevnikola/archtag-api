@@ -93,9 +93,9 @@ public class AuthenticationController {
     ) {
         try {
 
-            boolean hasBeenAllreadyValidated = authService.resendVerification();
+            boolean hasBeenAlreadyValidated = authService.resendVerification();
 
-            if (!hasBeenAllreadyValidated) {
+            if (!hasBeenAlreadyValidated) {
                 throw new ApiRequestException(HttpStatus.CONFLICT, "Verification has already been done.");
             }
 
