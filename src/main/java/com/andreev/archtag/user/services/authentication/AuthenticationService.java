@@ -7,7 +7,13 @@ import com.andreev.archtag.global.utils.ConfigUtility;
 import com.andreev.archtag.user.domain.authentication.RefreshTokenEntity;
 import com.andreev.archtag.user.domain.authentication.Role;
 import com.andreev.archtag.user.domain.authentication.UserEntity;
-import com.andreev.archtag.user.dto.authentication.*;
+import com.andreev.archtag.user.dto.authentication.AuthenticationResponse;
+import com.andreev.archtag.user.dto.authentication.ForgotPasswordRequest;
+import com.andreev.archtag.user.dto.authentication.ForgottenPassResponse;
+import com.andreev.archtag.user.dto.authentication.RegisterRequest;
+import com.andreev.archtag.user.dto.authentication.ResetPasswordRequest;
+import com.andreev.archtag.user.dto.authentication.SigninRequest;
+import com.andreev.archtag.user.dto.authentication.UpdateAccountRequest;
 import com.andreev.archtag.user.repositories.authentication.RefreshTokenRepository;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -79,12 +85,10 @@ public class AuthenticationService {
         String jwt = jwtService.generateToken(user);
 
         CompletableFuture<AuthenticationResponse> response = authenticationFuture.thenCombineAsync(refreshToken,
-                (aVoid, refreshTokenValue) -> {
-                    return AuthenticationResponse.builder()
-                            .token(jwt)
-                            .refreshToken(refreshTokenValue)
-                            .build();
-                }
+                (aVoid, refreshTokenValue) -> AuthenticationResponse.builder()
+                        .token(jwt)
+                        .refreshToken(refreshTokenValue)
+                        .build()
         );
 
         return Mono.fromFuture(response);
@@ -163,6 +167,37 @@ public class AuthenticationService {
         user.setResetPasswordCodeExpiry(null);
         userRepo.save(user);
         return new ForgottenPassResponse(true, "Password has been reset successfully.");
+    }
+
+    public void deleteAccount(String email, String authToken) {
+        UserEntity authUser = getUserFromToken(authToken);
+        if (!authUser.getEmail().equals(email)) {
+            throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "You can only delete your own account.");
+        }
+        userRepo.deleteByEmail(email);
+    }
+
+    public void updateAccount(UpdateAccountRequest request, String authToken) {
+        UserEntity authUser = getUserFromToken(authToken);
+        if (!authUser.getEmail().equals(request.getEmail())) {
+            throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "You can only update your own account.");
+        }
+
+        if (request.getFirstname() != null && !request.getFirstname().isEmpty()) {
+            authUser.setFirstname(request.getFirstname());
+        }
+        if (request.getLastname() != null && !request.getLastname().isEmpty()) {
+            authUser.setLastname(request.getLastname());
+        }
+        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+            authUser.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+        userRepo.save(authUser);
+    }
+
+    private UserEntity getUserFromToken(String token) {
+        String userUuid = jwtService.extractUuid(token);
+        return userRepo.findByUuid(userUuid).orElseThrow(() -> new ApiRequestException(HttpStatus.UNAUTHORIZED, "Invalid token."));
     }
 
     private CompletableFuture<Void> authenticateUser(String email, String password) {

@@ -92,15 +92,11 @@ public class AuthenticationController {
     public ResponseEntity<Void> resendVerification(
     ) {
         try {
-
             boolean hasBeenAlreadyValidated = authService.resendVerification();
-
             if (!hasBeenAlreadyValidated) {
                 throw new ApiRequestException(HttpStatus.CONFLICT, "Verification has already been done.");
             }
-
             return ResponseEntity.ok().build();
-
         } catch (NoSuchElementException e) {
             throw new ApiRequestException(HttpStatus.BAD_REQUEST, "The user with this email was not found.");
         }
@@ -112,11 +108,9 @@ public class AuthenticationController {
     ) {
         try {
             final boolean isVerified = authService.verifyEmail(code);
-
             if (!isVerified) {
                 throw new ApiRequestException(HttpStatus.CONFLICT, "Verification has already been done.");
             }
-
             return ResponseEntity.ok().build();
         } catch (NoSuchElementException e) {
             throw new ApiRequestException(HttpStatus.BAD_REQUEST, "The user with this email was not found.");
@@ -146,6 +140,26 @@ public class AuthenticationController {
             return ResponseEntity.status(e.getStatus()).body(new ForgottenPassResponse(false, e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ForgottenPassResponse(false, "An unexpected error occurred."));
+        }
+    }
+
+    @PostMapping("/delete-account")
+    public ResponseEntity<Void> deleteAccount(@Valid @RequestBody DeleteAccountRequest request, @RequestHeader("Authorization") String authToken) {
+        try {
+            authService.deleteAccount(request.getEmail(), authToken.substring(7)); // remove "Bearer " prefix
+            return ResponseEntity.ok().build();
+        } catch (ApiRequestException e) {
+            return ResponseEntity.status(e.getStatus()).build();
+        }
+    }
+
+    @PostMapping("/update-account")
+    public ResponseEntity<Void> updateAccount(@Valid @RequestBody UpdateAccountRequest request, @RequestHeader("Authorization") String authToken) {
+        try {
+            authService.updateAccount(request, authToken.substring(7)); // remove "Bearer " prefix
+            return ResponseEntity.ok().build();
+        } catch (ApiRequestException e) {
+            return ResponseEntity.status(e.getStatus()).build();
         }
     }
 }
