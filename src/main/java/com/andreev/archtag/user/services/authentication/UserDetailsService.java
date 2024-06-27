@@ -25,6 +25,7 @@ public class UserDetailsService implements org.springframework.security.core.use
                 .email(jwtService.extractEmail(token))
                 .role(jwtService.extractClaim(token, "role"))
                 .isBanned(jwtService.extractClaim(token, "isBanned"))
+                .isVerified(jwtService.extractClaim(token, "isVerified")) // Add this line
                 .build();
     }
 

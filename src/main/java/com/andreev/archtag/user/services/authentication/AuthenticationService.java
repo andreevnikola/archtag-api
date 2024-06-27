@@ -109,7 +109,7 @@ public class AuthenticationService {
     }
 
     private void sendVerificationEmail(UserEntity user) {
-        String verificationUrl = configUtility.getProperty("webapp.url") + "/auth/verify-email/" + user.getVerificationCode();
+        String verificationUrl = configUtility.getProperty("webapp.url") + "/auth/verify-email/?code=" + user.getVerificationCode();
         emailService.send(user.getEmail(), "Verify Your Email", "Please verify your email by clicking the link: " + verificationUrl);
     }
 

@@ -63,6 +63,7 @@ public class JwtService {
                 .claim("lastname", userEntityDetails.getLastname())
                 .claim("role", userEntityDetails.getRole().name())
                 .claim("isBanned", userEntityDetails.getIsBanned())
+                .claim("isVerified", userEntityDetails.getIsVerified()) // Add this line
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
