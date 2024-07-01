@@ -8,7 +8,6 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
@@ -28,11 +27,11 @@ public class JwtService {
     }
 
     public String extractFirstName(String token) {
-        return extractClaim(token, "first_name");
+        return extractClaim(token, "firstname");
     }
 
     public String extractLastName(String token) {
-        return extractClaim(token, "last_name");
+        return extractClaim(token, "lastname");
     }
 
     public String extractUuid(String token) {
@@ -53,28 +52,25 @@ public class JwtService {
         return generateToken(new HashMap<>(), userEntityDetails);
     }
 
-    public String generateToken(
-            Map<String, Object> extraClaims,
-            UserEntity userEntityDetails
-    ) {
-        return Jwts
-                .builder()
+    public String generateToken(Map<String, Object> extraClaims, UserEntity userEntityDetails) {
+        return Jwts.builder()
                 .setClaims(extraClaims)
                 .setSubject(userEntityDetails.getUuid())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * Integer.valueOf(configUtility.getProperty("authentication.token-expiration"))))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * Integer.parseInt(configUtility.getProperty("authentication.token-expiration"))))
                 .claim("email", userEntityDetails.getEmail())
                 .claim("firstname", userEntityDetails.getFirstname())
                 .claim("lastname", userEntityDetails.getLastname())
                 .claim("role", userEntityDetails.getRole().name())
                 .claim("isBanned", userEntityDetails.getIsBanned())
-                .signWith(getSigingKey(), SignatureAlgorithm.HS256)
+                .claim("isVerified", userEntityDetails.getIsVerified()) // Add this line
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
     public boolean isTokenValid(String token) {
         final String uuid = extractUuid(token);
-        return uuid != null && uuid != "" && !isTokenExpired(token);
+        return uuid != null && !uuid.isEmpty() && !isTokenExpired(token);
     }
 
     public boolean isTokenValid(String token, UserEntity userEntityDetails) {
@@ -91,18 +87,15 @@ public class JwtService {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts
-                .parserBuilder()
-                .setSigningKey(getSigingKey())
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
     }
 
-    @Autowired
-    private Key getSigingKey() {
+    private Key getSigningKey() {
         final String SECRET_KEY = configUtility.getProperty("authentication.secret-key");
-
         byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);
     }

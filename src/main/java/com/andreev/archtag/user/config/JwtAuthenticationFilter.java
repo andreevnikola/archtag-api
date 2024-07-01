@@ -16,6 +16,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.util.Arrays;
+
 
 @Component
 @RequiredArgsConstructor
@@ -23,6 +25,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final String[] UNVALIDATED_ROUTES = {
+            "/api/auth/resend-verification",
+            "/api/auth/verify-email",
+    };
 
     @Override
     @SneakyThrows
@@ -43,6 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (userEntityDetails == null || !jwtService.isTokenValid(jwt, userEntityDetails)) {
                 response.setStatus(HttpStatus.FORBIDDEN.value());
+                response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write(
                         new ManuallyThrowedException(
                                 "Невалиден токен!",
@@ -52,8 +59,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            if (!userEntityDetails.getIsVerified()) {
+            if (!userEntityDetails.getIsVerified() && !Arrays.stream(UNVALIDATED_ROUTES).anyMatch(request.getRequestURI()::contains)) {
                 response.setStatus(HttpStatus.CONFLICT.value());
+                response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write(
                         new ManuallyThrowedException(
                                 "Потребителят не е потвърдил имейла си!",

@@ -1,27 +1,23 @@
 package com.andreev.archtag.user.controllers;
 
 import com.andreev.archtag.global.exception.ApiRequestException;
+import com.andreev.archtag.user.dto.authentication.*;
 import com.andreev.archtag.user.services.authentication.AuthenticationService;
 import com.andreev.archtag.user.services.authentication.JwtService;
 import com.andreev.archtag.user.services.authentication.RefreshTokenService;
-import com.andreev.archtag.user.dto.authentication.*;
 import com.andreev.archtag.user.services.authentication.UserDetailsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationTrustResolver;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 import java.util.NoSuchElementException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -40,11 +36,11 @@ public class AuthenticationController {
     public Mono<ResponseEntity<AuthenticationResponse>> register(
             @Valid @RequestBody RegisterRequest req
     ) {
-       Mono<AuthenticationResponse> responseMono = authService.register(req);
+        Mono<AuthenticationResponse> responseMono = authService.register(req);
 
         return responseMono.map(ResponseEntity::ok)
                 .onErrorMap(DataIntegrityViolationException.class, e ->
-                    new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този email вече съществува!")
+                        new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този email вече съществува!")
                 );
     }
 
@@ -56,7 +52,7 @@ public class AuthenticationController {
 
         return responseMono.map(ResponseEntity::ok)
                 .onErrorMap(BadCredentialsException.class, e ->
-                    new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.")
+                        new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.")
                 );
     }
 
@@ -90,5 +86,80 @@ public class AuthenticationController {
         }
 
         return ResponseEntity.ok(userDetailsService.getUserByToken(token));
+    }
+
+    @GetMapping("/resend-verification")
+    public ResponseEntity<Void> resendVerification(
+    ) {
+        try {
+            boolean hasBeenAlreadyValidated = authService.resendVerification();
+            if (!hasBeenAlreadyValidated) {
+                throw new ApiRequestException(HttpStatus.CONFLICT, "Verification has already been done.");
+            }
+            return ResponseEntity.ok().build();
+        } catch (NoSuchElementException e) {
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "The user with this email was not found.");
+        }
+    }
+
+    @GetMapping("/verify-email/{code}")
+    public ResponseEntity<Void> verifyEmail(
+            @PathVariable String code
+    ) {
+        try {
+            final boolean isVerified = authService.verifyEmail(code);
+            if (!isVerified) {
+                throw new ApiRequestException(HttpStatus.CONFLICT, "Verification has already been done.");
+            }
+            return ResponseEntity.ok().build();
+        } catch (NoSuchElementException e) {
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "The user with this email was not found.");
+        } catch (IllegalArgumentException e) {
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Invalid verification code.");
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ForgottenPassResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        try {
+            ForgottenPassResponse response = authService.forgotPassword(request);
+            return ResponseEntity.ok(response);
+        } catch (ApiRequestException e) {
+            return ResponseEntity.status(e.getStatus()).body(new ForgottenPassResponse(false, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ForgottenPassResponse(false, "An unexpected error occurred."));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ForgottenPassResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        try {
+            ForgottenPassResponse response = authService.resetPassword(request);
+            return ResponseEntity.ok(response);
+        } catch (ApiRequestException e) {
+            return ResponseEntity.status(e.getStatus()).body(new ForgottenPassResponse(false, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ForgottenPassResponse(false, "An unexpected error occurred."));
+        }
+    }
+
+    @PostMapping("/delete-account")
+    public ResponseEntity<Void> deleteAccount(@Valid @RequestBody DeleteAccountRequest request, @RequestHeader("Authorization") String authToken) {
+        try {
+            authService.deleteAccount(request.getEmail(), authToken.substring(7)); // remove "Bearer " prefix
+            return ResponseEntity.ok().build();
+        } catch (ApiRequestException e) {
+            return ResponseEntity.status(e.getStatus()).build();
+        }
+    }
+
+    @PostMapping("/update-account")
+    public ResponseEntity<Void> updateAccount(@Valid @RequestBody UpdateAccountRequest request, @RequestHeader("Authorization") String authToken) {
+        try {
+            authService.updateAccount(request, authToken.substring(7)); // remove "Bearer " prefix
+            return ResponseEntity.ok().build();
+        } catch (ApiRequestException e) {
+            return ResponseEntity.status(e.getStatus()).build();
+        }
     }
 }
