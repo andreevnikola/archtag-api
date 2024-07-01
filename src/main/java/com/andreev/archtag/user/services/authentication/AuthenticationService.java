@@ -183,14 +183,18 @@ public class AuthenticationService {
             throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "You can only update your own account.");
         }
 
+        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+            if (request.getCurrentPassword() == null || !passwordEncoder.matches(request.getCurrentPassword(), authUser.getPassword())) {
+                throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Current password is incorrect.");
+            }
+            authUser.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
         if (request.getFirstname() != null && !request.getFirstname().isEmpty()) {
             authUser.setFirstname(request.getFirstname());
         }
         if (request.getLastname() != null && !request.getLastname().isEmpty()) {
             authUser.setLastname(request.getLastname());
-        }
-        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
-            authUser.setPassword(passwordEncoder.encode(request.getPassword()));
         }
         userRepo.save(authUser);
     }
