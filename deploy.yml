@@ -28,7 +28,8 @@ jobs:
 
       - name: Build and push Docker images
         run: |
-          docker buildx build --push --tag ${{ secrets.DOCKER_USERNAME }}/archtag-api:latest .
+          docker buildx create --use
+          docker buildx build --platform linux/amd64,linux/arm64 --push --tag vladigpasev/archtag-api:latest .
 
       - name: Deploy to Server
         env:
@@ -39,6 +40,6 @@ jobs:
           echo "${SSH_PRIVATE_KEY}" > ssh_key
           chmod 600 ssh_key
           ssh -o StrictHostKeyChecking=no -i ssh_key ${USER}@${HOST} << 'EOF'
-            docker pull ${{ secrets.DOCKER_USERNAME }}/archtag-api:latest
-            docker-compose -f ../docker-compose.yml up -d
+            docker pull vladigpasev/archtag-api:latest
+            docker-compose -f /path/to/docker-compose.yml up -d
           EOF
