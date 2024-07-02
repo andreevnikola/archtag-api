@@ -16,8 +16,10 @@ import com.andreev.archtag.user.dto.authentication.SigninRequest;
 import com.andreev.archtag.user.dto.authentication.UpdateAccountRequest;
 import com.andreev.archtag.user.repositories.authentication.RefreshTokenRepository;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -240,7 +242,15 @@ public class AuthenticationService {
         });
     }
 
-    private final Path storageLocation = Paths.get("/usr/share/nginx/html/images");
+    @Value("${storage.location}")
+    private String storageLocationPath;
+
+    private Path storageLocation;
+
+    @PostConstruct
+    private void init() {
+        storageLocation = Paths.get(storageLocationPath);
+    }
 
     public Mono<Void> uploadProfilePicture(String email, MultipartFile file, String authToken) {
         return Mono.fromRunnable(() -> {
