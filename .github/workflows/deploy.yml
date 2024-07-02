@@ -4,12 +4,6 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '.github/**'
-    tags-ignore:
-      - '*'
-    # Only run if the commit message contains the word 'deploy'
-    types: [created, deleted, pushed]
 
 jobs:
   deploy:
@@ -43,7 +37,7 @@ jobs:
           echo "${SSH_PRIVATE_KEY}" > ssh_key
           chmod 600 ssh_key
           ssh -o StrictHostKeyChecking=no -i ssh_key ${USER}@${HOST} << 'EOF'
-            cd /path/to/your/project
+            cd ~/archtag
             docker-compose pull archtag-api
             docker-compose up -d archtag-api
           EOF
