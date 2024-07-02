@@ -240,8 +240,8 @@ public class AuthenticationService {
         });
     }
 
-    private final Path storageLocation = Paths.get("..", "storage");
-    //TODO: DA GI TRIE!!!!
+    private final Path storageLocation = Paths.get("/usr/share/nginx/html/images");
+
     public Mono<Void> uploadProfilePicture(String email, MultipartFile file, String authToken) {
         return Mono.fromRunnable(() -> {
             UserEntity authUser = getUserFromToken(authToken);
@@ -269,16 +269,13 @@ public class AuthenticationService {
                 BufferedImage originalImage = ImageIO.read(file.getInputStream());
                 BufferedImage resizedImage = Scalr.resize(originalImage, Scalr.Method.QUALITY, Scalr.Mode.FIT_TO_WIDTH, 720);
 
-                // Get the original file extension
                 String originalFilename = file.getOriginalFilename();
                 String fileExtension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
 
-                // Generate a unique filename using the user UUID and the current timestamp
                 String uniqueFilename = authUser.getUuid() + "_" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()) + "." + fileExtension;
                 Path targetLocation = storageLocation.resolve(uniqueFilename);
                 ImageIO.write(resizedImage, fileExtension, new File(targetLocation.toString()));
 
-                // Add the profile picture path to the user
                 authUser.addProfilePicturePath(targetLocation.toString());
                 userRepo.save(authUser);
 
