@@ -18,14 +18,17 @@ public class UserDetailsService implements org.springframework.security.core.use
     private final JwtService jwtService;
 
     public UserDto getUserByToken(String token) throws ApiRequestException {
+        String uuid = jwtService.extractUuid(token);
+        UserEntity user = getUserByUuid(uuid);
         return UserDto.builder()
-                .uuid(jwtService.extractUuid(token))
+                .uuid(uuid)
                 .firstname(jwtService.extractFirstName(token))
                 .lastname(jwtService.extractLastName(token))
                 .email(jwtService.extractEmail(token))
                 .role(jwtService.extractClaim(token, "role"))
                 .isBanned(jwtService.extractClaim(token, "isBanned"))
-                .isVerified(jwtService.extractClaim(token, "isVerified")) // Add this line
+                .isVerified(jwtService.extractClaim(token, "isVerified"))
+                .profilePictureUrl(user.getLatestProfilePicturePath()) // Add this line
                 .build();
     }
 

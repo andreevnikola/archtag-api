@@ -24,11 +24,30 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import javax.imageio.ImageIO;
+import org.imgscalr.Scalr;
+import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Mono;
+
 
 @Service
 @RequiredArgsConstructor
@@ -220,4 +239,62 @@ public class AuthenticationService {
             }
         });
     }
+
+    private final Path storageLocation = Paths.get("..", "storage");
+
+    public Mono<Void> uploadProfilePicture(String email, MultipartFile file, String authToken) {
+        return Mono.fromRunnable(() -> {
+            UserEntity authUser = getUserFromToken(authToken);
+            if (!authUser.getEmail().equals(email)) {
+                throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "You can only update your own profile picture.");
+            }
+
+            if (file.isEmpty()) {
+                throw new ApiRequestException(HttpStatus.BAD_REQUEST, "File is empty.");
+            }
+
+            if (!isImage(file)) {
+                throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Only image files are allowed.");
+            }
+
+            if (file.getSize() > 10 * 1024 * 1024) {
+                throw new ApiRequestException(HttpStatus.BAD_REQUEST, "File size exceeds the maximum limit of 10MB.");
+            }
+
+            try {
+                if (!Files.exists(storageLocation)) {
+                    Files.createDirectories(storageLocation);
+                }
+
+                BufferedImage originalImage = ImageIO.read(file.getInputStream());
+                BufferedImage resizedImage = Scalr.resize(originalImage, Scalr.Method.QUALITY, Scalr.Mode.FIT_TO_WIDTH, 720);
+
+                // Get the original file extension
+                String originalFilename = file.getOriginalFilename();
+                String fileExtension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
+
+                // Generate a unique filename using the user UUID and the current timestamp
+                String uniqueFilename = authUser.getUuid() + "_" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()) + "." + fileExtension;
+                Path targetLocation = storageLocation.resolve(uniqueFilename);
+                ImageIO.write(resizedImage, fileExtension, new File(targetLocation.toString()));
+
+                // Add the profile picture path to the user
+                authUser.addProfilePicturePath(targetLocation.toString());
+                userRepo.save(authUser);
+
+            } catch (IOException e) {
+                throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not process and store file. Please try again!");
+            }
+        });
+    }
+
+    private boolean isImage(MultipartFile file) {
+        try {
+            BufferedImage image = ImageIO.read(file.getInputStream());
+            return image != null;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
 }
