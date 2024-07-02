@@ -241,7 +241,7 @@ public class AuthenticationService {
     }
 
     private final Path storageLocation = Paths.get("..", "storage");
-
+    //TODO: DA GI TRIE!!!!
     public Mono<Void> uploadProfilePicture(String email, MultipartFile file, String authToken) {
         return Mono.fromRunnable(() -> {
             UserEntity authUser = getUserFromToken(authToken);
