@@ -27,9 +27,9 @@ jobs:
           spring.application.name=security
 
           # Updated Database Configuration
-          spring.datasource.url=jdbc:postgresql://ep-spring-dew-a2yw1wtc-pooler.eu-central-1.aws.neon.tech:5432/verceldb?sslmode=require
-          spring.datasource.username=default
-          spring.datasource.password=4pyJ8AdOLkzR
+          spring.datasource.url=jdbc:postgresql://195.179.231.200:5432/archtag
+          spring.datasource.username=archtagadmin
+          spring.datasource.password=2024archtagplovdiv
           spring.datasource.driver-class-name=org.postgresql.Driver
 
           spring.jpa.hibernate.ddl-auto=update
@@ -58,7 +58,7 @@ jobs:
           # Set the maximum request size (e.g., 10MB)
           spring.servlet.multipart.max-request-size=10MB
 
-          webapp.url=http://195.179.231.200
+          webapp.url=https://app.archtag.org
           storage.location=/usr/share/nginx/html/storage
           EOL
 
