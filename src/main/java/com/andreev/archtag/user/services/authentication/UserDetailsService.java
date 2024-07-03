@@ -28,7 +28,7 @@ public class UserDetailsService implements org.springframework.security.core.use
                 .role(jwtService.extractClaim(token, "role"))
                 .isBanned(jwtService.extractClaim(token, "isBanned"))
                 .isVerified(jwtService.extractClaim(token, "isVerified"))
-                .profilePictureUrl(user.getLatestProfilePicturePath()) // Add this line
+                .profilePictureUrl(user.getProfilePictureFilename())
                 .build();
     }
 

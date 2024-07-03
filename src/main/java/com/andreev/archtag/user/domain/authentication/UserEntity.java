@@ -10,9 +10,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -56,22 +54,15 @@ public class UserEntity implements UserDetails {
     @Column(name = "reset_password_code_expiry")
     private LocalDateTime resetPasswordCodeExpiry;
 
-    @ElementCollection
-    private List<String> profilePicturePaths = new ArrayList<>();
+    @Column(name = "profile_picture_filename")
+    private String profilePictureFilename;
 
-    public void addProfilePicturePath(String path) {
-        this.profilePicturePaths.add(path);
+    public String getProfilePictureFilename() {
+        return profilePictureFilename;
     }
 
-    public List<String> getProfilePicturePaths() {
-        return profilePicturePaths;
-    }
-
-    public String getLatestProfilePicturePath() {
-        if (profilePicturePaths.isEmpty()) {
-            return null;
-        }
-        return profilePicturePaths.get(profilePicturePaths.size() - 1);
+    public void setProfilePictureFilename(String profilePictureFilename) {
+        this.profilePictureFilename = profilePictureFilename;
     }
 
     public boolean getIsVerified() {

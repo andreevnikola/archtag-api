@@ -2,7 +2,6 @@ package com.andreev.archtag.user.services.profile;
 
 import com.andreev.archtag.global.exception.ApiRequestException;
 import com.andreev.archtag.user.domain.authentication.UserEntity;
-import com.andreev.archtag.user.dto.authentication.DeleteAccountRequest;
 import com.andreev.archtag.user.dto.authentication.UpdateAccountRequest;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
 import com.andreev.archtag.user.services.authentication.JwtService;
@@ -21,9 +20,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
 import java.util.Date;
 import javax.imageio.ImageIO;
 import org.imgscalr.Scalr;
@@ -110,7 +107,15 @@ public class UserProfileService {
                 Path targetLocation = storageLocation.resolve(uniqueFilename);
                 ImageIO.write(resizedImage, fileExtension, new File(targetLocation.toString()));
 
-                authUser.addProfilePicturePath(targetLocation.toString());
+                // Delete old profile picture if exists
+                String oldProfilePictureFilename = authUser.getProfilePictureFilename();
+                if (oldProfilePictureFilename != null && !oldProfilePictureFilename.isEmpty()) {
+                    Path oldPath = storageLocation.resolve(oldProfilePictureFilename);
+                    Files.deleteIfExists(oldPath);
+                }
+
+                // Save new profile picture filename
+                authUser.setProfilePictureFilename(uniqueFilename);
                 userRepo.save(authUser);
 
             } catch (IOException e) {
