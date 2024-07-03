@@ -16,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.NoSuchElementException;
 
@@ -142,36 +141,5 @@ public class AuthenticationController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ForgottenPassResponse(false, "An unexpected error occurred."));
         }
-    }
-
-    @PostMapping("/delete-account")
-    public ResponseEntity<Void> deleteAccount(@Valid @RequestBody DeleteAccountRequest request, @RequestHeader("Authorization") String authToken) {
-        try {
-            authService.deleteAccount(request.getEmail(), authToken.substring(7)); // remove "Bearer " prefix
-            return ResponseEntity.ok().build();
-        } catch (ApiRequestException e) {
-            return ResponseEntity.status(e.getStatus()).build();
-        }
-    }
-
-    @PostMapping("/update-account")
-    public ResponseEntity<Void> updateAccount(@Valid @RequestBody UpdateAccountRequest request, @RequestHeader("Authorization") String authToken) {
-        try {
-            authService.updateAccount(request, authToken.substring(7)); // remove "Bearer " prefix
-            return ResponseEntity.ok().build();
-        } catch (ApiRequestException e) {
-            return ResponseEntity.status(e.getStatus()).build();
-        }
-    }
-    @PostMapping("/upload-profile-picture")
-    public Mono<ResponseEntity<Void>> uploadProfilePicture(
-            @RequestParam("email") String email,
-            @RequestParam("profilePicture") MultipartFile profilePicture,
-            @RequestHeader("Authorization") String authToken
-    ) {
-        return authService.uploadProfilePicture(email, profilePicture, authToken.substring(7)) // remove "Bearer " prefix
-                .then(Mono.just(ResponseEntity.ok().<Void>build()))
-                .onErrorResume(ApiRequestException.class, e ->
-                        Mono.just(ResponseEntity.status(e.getStatus()).build()));
     }
 }
