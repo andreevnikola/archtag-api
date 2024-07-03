@@ -59,7 +59,7 @@ jobs:
           spring.servlet.multipart.max-request-size=10MB
 
           webapp.url=http://195.179.231.200
-          storage.location=/usr/share/nginx/html/images
+          storage.location=/usr/share/nginx/html/storage
           EOL
 
       - name: Build and push Docker images
