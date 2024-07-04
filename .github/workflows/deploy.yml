@@ -48,8 +48,8 @@ jobs:
           # Email Configuration
           spring.mail.host=smtp.office365.com
           spring.mail.port=587
-          spring.mail.username=archtag@skyier.net
-          spring.mail.password=NikiVladi_2024
+          spring.mail.username=no-reply@archtag.org
+          spring.mail.password=2024-archtag-plovdiv
           spring.mail.properties.mail.smtp.auth=true
           spring.mail.properties.mail.smtp.starttls.enable=true
 
