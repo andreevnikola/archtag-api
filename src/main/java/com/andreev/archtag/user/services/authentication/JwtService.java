@@ -1,7 +1,7 @@
 package com.andreev.archtag.user.services.authentication;
 
-import com.andreev.archtag.user.domain.authentication.UserEntity;
 import com.andreev.archtag.global.utils.ConfigUtility;
+import com.andreev.archtag.user.domain.authentication.UserEntity;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -63,7 +63,8 @@ public class JwtService {
                 .claim("lastname", userEntityDetails.getLastname())
                 .claim("role", userEntityDetails.getRole().name())
                 .claim("isBanned", userEntityDetails.getIsBanned())
-                .claim("isVerified", userEntityDetails.getIsVerified()) // Add this line
+                .claim("isVerified", userEntityDetails.getIsVerified())
+                .claim("profilePictureFilename", userEntityDetails.getProfilePictureFilename())
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

@@ -5,7 +5,6 @@ import com.andreev.archtag.user.domain.authentication.UserEntity;
 import com.andreev.archtag.user.dto.authentication.UserDto;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -19,7 +18,6 @@ public class UserDetailsService implements org.springframework.security.core.use
 
     public UserDto getUserByToken(String token) throws ApiRequestException {
         String uuid = jwtService.extractUuid(token);
-        UserEntity user = getUserByUuid(uuid);
         return UserDto.builder()
                 .uuid(uuid)
                 .firstname(jwtService.extractFirstName(token))
@@ -28,7 +26,7 @@ public class UserDetailsService implements org.springframework.security.core.use
                 .role(jwtService.extractClaim(token, "role"))
                 .isBanned(jwtService.extractClaim(token, "isBanned"))
                 .isVerified(jwtService.extractClaim(token, "isVerified"))
-                .profilePictureUrl(user.getProfilePictureFilename())
+                .profilePictureFilename(jwtService.extractClaim(token, "profilePictureFilename"))
                 .build();
     }
 

@@ -47,13 +47,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (uuid != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserEntity userEntityDetails = this.userDetailsService.getUserByUuid(uuid);
 
-            if (userEntityDetails == null || !jwtService.isTokenValid(jwt, userEntityDetails)) {
-                response.setStatus(HttpStatus.FORBIDDEN.value());
+            if (!jwtService.isTokenValid(jwt, userEntityDetails)) {
+                response.setStatus(HttpStatus.UNAUTHORIZED.value());
                 response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write(
                         new ManuallyThrowedException(
                                 "Невалиден токен!",
-                                HttpStatus.FORBIDDEN
+                                HttpStatus.UNAUTHORIZED
                         ).getExceptionAsJson()
                 );
                 return;
