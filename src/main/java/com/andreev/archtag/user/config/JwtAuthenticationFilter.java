@@ -47,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (uuid != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserEntity userEntityDetails = this.userDetailsService.getUserByUuid(uuid);
 
-            if (userEntityDetails == null || !jwtService.isTokenValid(jwt, userEntityDetails)) {
+            if (!jwtService.isTokenValid(jwt, userEntityDetails)) {
                 response.setStatus(HttpStatus.FORBIDDEN.value());
                 response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write(
