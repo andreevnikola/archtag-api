@@ -38,8 +38,10 @@ public class UserProfileController {
         try {
             userProfileService.updateAccount(request, authToken.substring(7)); // remove "Bearer " prefix
             return ResponseEntity.ok().build();
-        } catch (ApiRequestException e) {
-            return ResponseEntity.status(e.getStatus()).build();
+        } catch (InvalidParameterException e) {
+            throw new ApiRequestException(HttpStatus.UNAUTHORIZED, e.getMessage());
+        } catch (Exception e) {
+            throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR, "Имаше грешка със обновяването на акаунта. Моля, опитайте отново.");
         }
     }
 
@@ -51,7 +53,9 @@ public class UserProfileController {
     ) {
         return userProfileService.uploadProfilePicture(email, profilePicture, authToken.substring(7)) // remove "Bearer " prefix
                 .then(Mono.just(ResponseEntity.ok().<Void>build()))
-                .onErrorResume(ApiRequestException.class, e ->
-                        Mono.just(ResponseEntity.status(e.getStatus()).build()));
+                .onErrorResume(InvalidParameterException.class, e ->
+                        Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build()))
+                .onErrorResume(RuntimeException.class, e ->
+                        Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()));
     }
 }
