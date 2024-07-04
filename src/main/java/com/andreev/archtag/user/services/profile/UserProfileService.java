@@ -1,12 +1,14 @@
 package com.andreev.archtag.user.services.profile;
 
 import com.andreev.archtag.global.exception.ApiRequestException;
+import com.andreev.archtag.global.lib.AuthenticationInfo;
 import com.andreev.archtag.user.domain.authentication.UserEntity;
 import com.andreev.archtag.user.dto.authentication.UpdateAccountRequest;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
 import com.andreev.archtag.user.services.authentication.JwtService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.imgscalr.Scalr;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,16 +16,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.InvalidParameterException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import javax.imageio.ImageIO;
-import org.imgscalr.Scalr;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +34,7 @@ public class UserProfileService {
     private final UserRepository userRepo;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationInfo authenticationInfo;
 
     @Value("${storage.location}")
     private String storageLocationPath;
@@ -43,11 +46,14 @@ public class UserProfileService {
         storageLocation = Paths.get(storageLocationPath);
     }
 
-    public void deleteAccount(String email, String authToken) {
-        UserEntity authUser = getUserFromToken(authToken);
-        if (!authUser.getEmail().equals(email)) {
-            throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "You can only delete your own account.");
+    public void deleteAccount(String password) {
+        String email = authenticationInfo.getUserEntity().getEmail();
+
+        UserEntity user = userRepo.findByEmail(email).orElseThrow();
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new InvalidParameterException("Password is incorrect.");
         }
+
         userRepo.deleteByEmail(email);
     }
 

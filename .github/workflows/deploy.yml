@@ -42,7 +42,7 @@ jobs:
           authentication.token-expiration=60
 
           # PERFORMANCE SETTINGS
-          server.tomcat.max-threads=4
+          server.tomcat.max-threads=3
           spring.threads.virtual.enabled=true
 
           # Email Configuration

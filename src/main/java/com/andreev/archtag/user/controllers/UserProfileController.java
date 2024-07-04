@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 
+import java.security.InvalidParameterException;
+
 @RestController
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
@@ -20,12 +22,14 @@ public class UserProfileController {
     private final UserProfileService userProfileService;
 
     @PostMapping("/delete-account")
-    public ResponseEntity<Void> deleteAccount(@Valid @RequestBody DeleteAccountRequest request, @RequestHeader("Authorization") String authToken) {
+    public ResponseEntity<Void> deleteAccount(@Valid @RequestBody DeleteAccountRequest request) {
         try {
-            userProfileService.deleteAccount(request.getEmail(), authToken.substring(7)); // remove "Bearer " prefix
+            userProfileService.deleteAccount(request.getPassword());
             return ResponseEntity.ok().build();
-        } catch (ApiRequestException e) {
-            return ResponseEntity.status(e.getStatus()).build();
+        } catch (InvalidParameterException e) {
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception e) {
+            throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR, "Имаше грешка със изтриването на акаунта. Моля, опитайте отново.");
         }
     }
 
