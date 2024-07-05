@@ -11,6 +11,4 @@ public class ArchTagApplication {
     public static void main(String[] args) {
         SpringApplication.run(ArchTagApplication.class, args);
     }
-
-    // Remove the corsConfigurer method to disable CORS configuration
 }
