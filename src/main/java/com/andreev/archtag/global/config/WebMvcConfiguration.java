@@ -9,6 +9,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 class WebMvcConfiguration implements WebMvcConfigurer {
     @Override
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
-        configurer.defaultContentType(MediaType.APPLICATION_JSON_UTF8);
+        configurer.defaultContentType(MediaType.APPLICATION_JSON);
     }
+
+    // Remove or comment out the addCorsMappings method to disable CORS configuration
+    // @Override
+    // public void addCorsMappings(CorsRegistry registry) {
+    //     registry.addMapping("/**").allowedMethods("*");
+    // }
 }
