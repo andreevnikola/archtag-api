@@ -1,16 +1,13 @@
 package com.andreev.archtag.user.services.authentication;
 
-import com.andreev.archtag.global.exception.ApiRequestException;
 import com.andreev.archtag.global.utils.ConfigUtility;
 import com.andreev.archtag.user.domain.authentication.UserEntity;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
@@ -91,15 +88,12 @@ public class JwtService {
     }
 
     private Claims extractAllClaims(String token) {
-        try {
-            return Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
-        } catch (ExpiredJwtException e) {
-            throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Token has expired.");
-        }
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
     }
 
     private Key getSigningKey() {
