@@ -21,7 +21,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ApiException> handleNoHandlerFoundException(NoHandlerFoundException e) {
         return new ResponseEntity<>(new ApiException(
-                "Page not found",
+                "Страницата не е намерена!",
                 HttpStatus.NOT_FOUND
         ), HttpStatus.NOT_FOUND);
     }

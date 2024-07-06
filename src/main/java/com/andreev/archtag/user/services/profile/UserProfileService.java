@@ -49,7 +49,7 @@ public class UserProfileService {
 
         UserEntity user = userRepo.findByEmail(email).orElseThrow();
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new InvalidParameterException("Password is incorrect.");
+            throw new InvalidParameterException("Предоставената парола е грешна.");
         }
 
         userRepo.deleteByEmail(email);
@@ -60,12 +60,12 @@ public class UserProfileService {
         UserEntity authUser = userRepo.findByUuid(userUuid).orElseThrow();
 
         if (!authUser.getEmail().equals(request.getEmail())) {
-            throw new InvalidParameterException("You can only update your own account.");
+            throw new InvalidParameterException("Можете да промените само собствения си акаунт.");
         }
 
         if (request.getPassword() != null && !request.getPassword().isEmpty()) {
             if (request.getCurrentPassword() == null || !passwordEncoder.matches(request.getCurrentPassword(), authUser.getPassword())) {
-                throw new InvalidParameterException("Current password is incorrect.");
+                throw new InvalidParameterException("Текущата парола е грешна.");
             }
             authUser.setPassword(passwordEncoder.encode(request.getPassword()));
         }
@@ -85,19 +85,19 @@ public class UserProfileService {
             UserEntity authUser = userRepo.findByUuid(userUuid).orElseThrow();
 
             if (!authUser.getEmail().equals(email)) {
-                throw new InvalidParameterException("You can only update your own profile picture.");
+                throw new InvalidParameterException("Можете да промените само собствената си профилна снимка.");
             }
 
             if (file.isEmpty()) {
-                throw new InvalidParameterException("File is empty.");
+                throw new InvalidParameterException("Файлът е празен.");
             }
 
             if (!isImage(file)) {
-                throw new InvalidParameterException("Only image files are allowed.");
+                throw new InvalidParameterException("Разрешени са само снимки.");
             }
 
             if (file.getSize() > 10 * 1024 * 1024) {
-                throw new InvalidParameterException("File size exceeds the maximum limit of 10MB.");
+                throw new InvalidParameterException("Размерът на файла не трябва да превишава 10 МБ.");
             }
 
             try {
@@ -127,7 +127,7 @@ public class UserProfileService {
                 userRepo.save(authUser);
 
             } catch (IOException e) {
-                throw new RuntimeException("Could not process and store file. Please try again!");
+                throw new RuntimeException("Нещо се обърка! Моля, опитайте отново.");
             }
         });
     }
