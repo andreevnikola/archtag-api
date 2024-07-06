@@ -48,8 +48,14 @@ public class AuthenticationController {
     public Mono<ResponseEntity<AuthenticationResponse>> signin(
             @Valid @RequestBody SigninRequest req
     ) {
-        Mono<AuthenticationResponse> responseMono = authService.signin(req);
+        Mono<AuthenticationResponse> responseMono = null;
+        try {
+            responseMono = authService.signin(req);
+        } catch (NoSuchElementException e) {
+            throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.");
+        }
 
+        assert responseMono != null;
         return responseMono.map(ResponseEntity::ok)
                 .onErrorMap(BadCredentialsException.class, e ->
                         new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.")
