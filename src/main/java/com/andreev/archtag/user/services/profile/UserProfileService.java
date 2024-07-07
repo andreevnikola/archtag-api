@@ -3,6 +3,7 @@ package com.andreev.archtag.user.services.profile;
 import com.andreev.archtag.global.lib.AuthenticationInfo;
 import com.andreev.archtag.user.domain.authentication.UserEntity;
 import com.andreev.archtag.user.dto.authentication.UpdateAccountRequest;
+import com.andreev.archtag.user.repositories.authentication.RefreshTokenRepository;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
 import com.andreev.archtag.user.services.authentication.JwtService;
 import jakarta.annotation.PostConstruct;
@@ -33,6 +34,7 @@ public class UserProfileService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationInfo authenticationInfo;
+    private final RefreshTokenRepository refreshTokenRepo;
 
     @Value("${storage.location}")
     private String storageLocationPath;
@@ -65,9 +67,10 @@ public class UserProfileService {
 
         if (request.getPassword() != null && !request.getPassword().isEmpty()) {
             if (request.getCurrentPassword() == null || !passwordEncoder.matches(request.getCurrentPassword(), authUser.getPassword())) {
-                throw new InvalidParameterException("Текущата парола е грешна.");
+                throw new InvalidParameterException("Грешна парола!");
             }
             authUser.setPassword(passwordEncoder.encode(request.getPassword()));
+            refreshTokenRepo.deleteAllByUserUuid(authUser.getUuid());
         }
 
         if (request.getFirstname() != null && !request.getFirstname().isEmpty()) {

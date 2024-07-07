@@ -36,12 +36,14 @@ public class AuthenticationController {
     public Mono<ResponseEntity<AuthenticationResponse>> register(
             @Valid @RequestBody RegisterRequest req
     ) {
-        Mono<AuthenticationResponse> responseMono = authService.register(req);
+        Mono<AuthenticationResponse> responseMono = null;
+        try {
+            responseMono = authService.register(req);
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този email вече съществува!");
+        }
 
-        return responseMono.map(ResponseEntity::ok)
-                .onErrorMap(DataIntegrityViolationException.class, e ->
-                        new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този email вече съществува!")
-                );
+        return responseMono.map(ResponseEntity::ok);
     }
 
     @PostMapping("/signin")
