@@ -31,7 +31,7 @@ public class PaymentService {
 
     public String createCheckoutSession(String authToken, String lookupKey) throws StripeException {
         String userUuid = jwtService.extractUuid(authToken);
-        UserEntity user = userRepo.findByUuid(userUuid).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserEntity user = userRepo.findByUuid(userUuid).orElseThrow(() -> new IllegalArgumentException("Потребителят не съществува!"));
 
         String customerId = user.getStripeCustomerId();
         if (customerId == null || customerId.isEmpty()) {
@@ -73,7 +73,7 @@ public class PaymentService {
 
         List<Price> prices = Price.list(params).getData();
         if (prices.isEmpty()) {
-            throw new IllegalArgumentException("Price not found for lookup key: " + lookupKey);
+            throw new IllegalArgumentException("Не е намерен такъв пакет!  " + lookupKey);
         }
         return prices.get(0);
     }
