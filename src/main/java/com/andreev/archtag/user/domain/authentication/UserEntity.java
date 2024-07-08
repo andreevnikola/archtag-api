@@ -57,6 +57,9 @@ public class UserEntity implements UserDetails {
     @Column(name = "profile_picture_filename")
     private String profilePictureFilename;
 
+    @Column(name = "stripe_customer_id") // Ново поле за Stripe customer ID
+    private String stripeCustomerId;
+
     public String getProfilePictureFilename() {
         return profilePictureFilename;
     }
@@ -70,6 +73,14 @@ public class UserEntity implements UserDetails {
             return false;
         }
         return this.isVerified;
+    }
+
+    public String getStripeCustomerId() {
+        return stripeCustomerId;
+    }
+
+    public void setStripeCustomerId(String stripeCustomerId) {
+        this.stripeCustomerId = stripeCustomerId;
     }
 
     @Override

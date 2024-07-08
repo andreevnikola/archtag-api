@@ -4,10 +4,8 @@ import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
 @Data
-public class CreateSubscriptionRequest {
-    @NotEmpty
-    private String customerId;
+public class CreateCheckoutSessionRequest {
 
     @NotEmpty
-    private String priceId;
+    private String lookupKey;
 }
