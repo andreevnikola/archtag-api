@@ -8,12 +8,11 @@ import org.springframework.http.HttpStatus;
 
 import java.time.ZonedDateTime;
 
-
 @AllArgsConstructor
 @Getter
 @Setter
 @Builder
-public class ApiException extends Throwable {
+public class ApiException extends RuntimeException {
 
     private String message;
     private Throwable cause;

@@ -14,6 +14,7 @@ import reactor.core.publisher.Mono;
 
 import java.security.InvalidParameterException;
 
+//useless comment
 @RestController
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
@@ -27,7 +28,7 @@ public class UserProfileController {
             userProfileService.deleteAccount(request.getPassword());
             return ResponseEntity.ok().build();
         } catch (InvalidParameterException e) {
-            throw new ApiRequestException(HttpStatus.BAD_REQUEST, e.getMessage());
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Грешна парола!");
         } catch (Exception e) {
             throw new ApiRequestException(HttpStatus.INTERNAL_SERVER_ERROR, "Имаше грешка със изтриването на акаунта. Моля, опитайте отново.");
         }

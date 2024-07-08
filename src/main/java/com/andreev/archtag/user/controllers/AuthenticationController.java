@@ -36,20 +36,28 @@ public class AuthenticationController {
     public Mono<ResponseEntity<AuthenticationResponse>> register(
             @Valid @RequestBody RegisterRequest req
     ) {
-        Mono<AuthenticationResponse> responseMono = authService.register(req);
+        Mono<AuthenticationResponse> responseMono = null;
+        try {
+            responseMono = authService.register(req);
+        } catch (DataIntegrityViolationException e) {
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този email вече съществува!");
+        }
 
-        return responseMono.map(ResponseEntity::ok)
-                .onErrorMap(DataIntegrityViolationException.class, e ->
-                        new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този email вече съществува!")
-                );
+        return responseMono.map(ResponseEntity::ok);
     }
 
     @PostMapping("/signin")
     public Mono<ResponseEntity<AuthenticationResponse>> signin(
             @Valid @RequestBody SigninRequest req
     ) {
-        Mono<AuthenticationResponse> responseMono = authService.signin(req);
+        Mono<AuthenticationResponse> responseMono = null;
+        try {
+            responseMono = authService.signin(req);
+        } catch (NoSuchElementException e) {
+            throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.");
+        }
 
+        assert responseMono != null;
         return responseMono.map(ResponseEntity::ok)
                 .onErrorMap(BadCredentialsException.class, e ->
                         new ApiRequestException(HttpStatus.UNAUTHORIZED, "Акаунта Ви не беше намерен! Невалиден email адрес или парола.")
@@ -94,11 +102,11 @@ public class AuthenticationController {
         try {
             boolean hasBeenAlreadyValidated = authService.resendVerification();
             if (!hasBeenAlreadyValidated) {
-                throw new ApiRequestException(HttpStatus.CONFLICT, "Verification has already been done.");
+                throw new ApiRequestException(HttpStatus.CONFLICT, "Верификацията вече е направена успешно.");
             }
             return ResponseEntity.ok().build();
         } catch (NoSuchElementException e) {
-            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "The user with this email was not found.");
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този имейл адрес не бе намерен.");
         }
     }
 
@@ -109,13 +117,13 @@ public class AuthenticationController {
         try {
             final boolean isVerified = authService.verifyEmail(code);
             if (!isVerified) {
-                throw new ApiRequestException(HttpStatus.CONFLICT, "Verification has already been done.");
+                throw new ApiRequestException(HttpStatus.CONFLICT, "Верификацията вече е направена успешно.");
             }
             return ResponseEntity.ok().build();
         } catch (NoSuchElementException e) {
-            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "The user with this email was not found.");
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Потребител с този имейл не бе намерен.");
         } catch (IllegalArgumentException e) {
-            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Invalid verification code.");
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Невалиден линк.");
         }
     }
 
@@ -127,7 +135,7 @@ public class AuthenticationController {
         } catch (ApiRequestException e) {
             return ResponseEntity.status(e.getStatus()).body(new ForgottenPassResponse(false, e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ForgottenPassResponse(false, "An unexpected error occurred."));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ForgottenPassResponse(false, "Възникна неочаквана грешка."));
         }
     }
 
@@ -139,7 +147,7 @@ public class AuthenticationController {
         } catch (ApiRequestException e) {
             return ResponseEntity.status(e.getStatus()).body(new ForgottenPassResponse(false, e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ForgottenPassResponse(false, "An unexpected error occurred."));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ForgottenPassResponse(false, "Възникна неочаквана грешка."));
         }
     }
 }

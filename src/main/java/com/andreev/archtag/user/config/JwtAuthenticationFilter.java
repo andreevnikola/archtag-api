@@ -4,6 +4,7 @@ import com.andreev.archtag.global.exception.ManuallyThrowedException;
 import com.andreev.archtag.user.domain.authentication.UserEntity;
 import com.andreev.archtag.user.services.authentication.JwtService;
 import com.andreev.archtag.user.services.authentication.UserDetailsService;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -41,8 +42,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         final String jwt = authHeader.substring(7);
-        final String uuid = jwtService.extractUuid(jwt);
-
+        String uuid = null;
+        try {
+            uuid = jwtService.extractUuid(jwt);
+        } catch (
+                ExpiredJwtException e) {
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write(
+                    new ManuallyThrowedException(
+                            "Token has expired!",
+                            HttpStatus.UNAUTHORIZED
+                    ).getExceptionAsJson()
+            );
+            return;
+        }
 
         if (uuid != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserEntity userEntityDetails = this.userDetailsService.getUserByUuid(uuid);

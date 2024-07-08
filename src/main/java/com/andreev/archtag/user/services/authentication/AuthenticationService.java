@@ -141,34 +141,34 @@ public class AuthenticationService {
 
     public ForgottenPassResponse forgotPassword(ForgotPasswordRequest request) {
         UserEntity user = userRepo.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "No user found with this email address."));
+                .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "Не бе намерен потребител с този имейл адрес."));
 
         user.setResetPasswordCode(generateVerificationCode());
         user.setResetPasswordCodeExpiry(LocalDateTime.now().plusHours(24));
         userRepo.save(user);
 
         sendResetPasswordEmail(user);
-        return new ForgottenPassResponse(true, "Password reset email sent.");
+        return new ForgottenPassResponse(true, "Имейлът за смяна на паролата е изпратен успешно.");
     }
 
     private void sendResetPasswordEmail(UserEntity user) {
         String resetUrl = configUtility.getProperty("webapp.url") + "/auth/reset-password?code=" + user.getResetPasswordCode();
-        emailService.send(user.getEmail(), "Password Reset Request", "To reset your password, click the link: " + resetUrl);
+        emailService.send(user.getEmail(), "Заявка за смяна на парола", "За да смените паролата си, моля натиснете на линка: " + resetUrl);
     }
 
     public ForgottenPassResponse resetPassword(ResetPasswordRequest request) {
         UserEntity user = userRepo.findByResetPasswordCode(request.getCode())
-                .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "Invalid reset code."));
+                .orElseThrow(() -> new ApiRequestException(HttpStatus.BAD_REQUEST, "Невалиден линк."));
 
         if (user.getResetPasswordCodeExpiry().isBefore(LocalDateTime.now())) {
-            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Reset code has expired.");
+            throw new ApiRequestException(HttpStatus.BAD_REQUEST, "Линкът е изтекъл.");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setResetPasswordCode(null);
         user.setResetPasswordCodeExpiry(null);
         userRepo.save(user);
-        return new ForgottenPassResponse(true, "Password has been reset successfully.");
+        return new ForgottenPassResponse(true, "Паролата бе сменена успешно.");
     }
 
     private CompletableFuture<Void> authenticateUser(String email, String password) {

@@ -1,7 +1,5 @@
 package com.andreev.archtag.user.domain.authentication;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,6 +8,7 @@ import lombok.Data;
 @Builder
 @AllArgsConstructor
 public class UserFromToken {
+
     private String uuid;
     private String email;
     private String role;
