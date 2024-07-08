@@ -1,9 +1,13 @@
 package com.andreev.archtag.user.services.authentication;
 
 import com.andreev.archtag.global.exception.ApiRequestException;
+import com.andreev.archtag.payment.services.PaymentService;
 import com.andreev.archtag.user.domain.authentication.UserEntity;
+import com.andreev.archtag.user.dto.authentication.SubscriptionDto;
 import com.andreev.archtag.user.dto.authentication.UserDto;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
+import com.stripe.exception.StripeException;
+import com.stripe.model.Subscription;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -15,9 +19,14 @@ public class UserDetailsService implements org.springframework.security.core.use
 
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final PaymentService paymentService;
 
-    public UserDto getUserByToken(String token) throws ApiRequestException {
+    public UserDto getUserByToken(String token) throws ApiRequestException, StripeException {
         String uuid = jwtService.extractUuid(token);
+        UserEntity user = getUserByUuid(uuid);
+
+        SubscriptionDto subscriptionDto = getUserSubscription(user);
+
         return UserDto.builder()
                 .uuid(uuid)
                 .firstname(jwtService.extractFirstName(token))
@@ -27,6 +36,7 @@ public class UserDetailsService implements org.springframework.security.core.use
                 .isBanned(jwtService.extractClaim(token, "isBanned"))
                 .isVerified(jwtService.extractClaim(token, "isVerified"))
                 .profilePictureFilename(jwtService.extractClaim(token, "profilePictureFilename"))
+                .subscription(subscriptionDto)
                 .build();
     }
 
@@ -36,6 +46,17 @@ public class UserDetailsService implements org.springframework.security.core.use
 
     public void deleteUserByEmail(String email) {
         userRepository.deleteByEmail(email);
+    }
+
+    private SubscriptionDto getUserSubscription(UserEntity user) throws StripeException {
+        Subscription subscription = paymentService.getUserSubscription(user);
+        return SubscriptionDto.builder()
+                .id(subscription.getId())
+                .status(subscription.getStatus())
+                .created(subscription.getCreated())
+                .currentPeriodStart(subscription.getCurrentPeriodStart())
+                .currentPeriodEnd(subscription.getCurrentPeriodEnd())
+                .build();
     }
 
     @Override

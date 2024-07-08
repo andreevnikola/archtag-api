@@ -3,9 +3,11 @@ package com.andreev.archtag.payment.services;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
 import com.stripe.model.Price;
+import com.stripe.model.Subscription;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.PriceListParams;
+import com.stripe.param.SubscriptionListParams;
 import com.stripe.param.checkout.SessionCreateParams;
 import com.andreev.archtag.user.repositories.authentication.UserRepository;
 import com.andreev.archtag.user.domain.authentication.UserEntity;
@@ -56,6 +58,24 @@ public class PaymentService {
         Session session = Session.create(params);
 
         return session.getUrl();
+    }
+
+    public Subscription getUserSubscription(UserEntity user) throws StripeException {
+        String customerId = user.getStripeCustomerId();
+        if (customerId == null || customerId.isEmpty()) {
+            throw new IllegalArgumentException("User does not have a Stripe customer ID.");
+        }
+
+        SubscriptionListParams params = SubscriptionListParams.builder()
+                .setCustomer(customerId)
+                .build();
+
+        List<Subscription> subscriptions = Subscription.list(params).getData();
+        if (subscriptions.isEmpty()) {
+            throw new IllegalArgumentException("No active subscription found for user.");
+        }
+
+        return subscriptions.get(0);
     }
 
     private String createStripeCustomer(String email) throws StripeException {

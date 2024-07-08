@@ -18,5 +18,6 @@ public class UserDto {
     private String role;
     private boolean isBanned;
     private boolean isVerified;
-    private String profilePictureFilename; // Add this field
+    private String profilePictureFilename;
+    private SubscriptionDto subscription;
 }

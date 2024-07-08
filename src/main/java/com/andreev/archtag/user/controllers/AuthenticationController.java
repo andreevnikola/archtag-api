@@ -6,6 +6,7 @@ import com.andreev.archtag.user.services.authentication.AuthenticationService;
 import com.andreev.archtag.user.services.authentication.JwtService;
 import com.andreev.archtag.user.services.authentication.RefreshTokenService;
 import com.andreev.archtag.user.services.authentication.UserDetailsService;
+import com.stripe.exception.StripeException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -85,15 +86,20 @@ public class AuthenticationController {
     }
 
     @GetMapping("/get-user-data/{token}")
-    public ResponseEntity<UserDto> getUserData(
-            @PathVariable String token
-    ) {
+    public ResponseEntity<UserDto> getUserData(@PathVariable String token) {
+        try {
+            if (!jwtService.isTokenValid(token)) {
+                throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Invalid token.");
+            }
 
-        if (!jwtService.isTokenValid(token)) {
-            throw new ApiRequestException(HttpStatus.UNAUTHORIZED, "Invalid token.");
+            return ResponseEntity.ok(userDetailsService.getUserByToken(token));
+        } catch (StripeException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(null);
+        } catch (ApiRequestException e) {
+            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(null);
         }
-
-        return ResponseEntity.ok(userDetailsService.getUserByToken(token));
     }
 
     @GetMapping("/resend-verification")
