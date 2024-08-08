@@ -60,6 +60,11 @@ jobs:
 
           webapp.url=https://app.archtag.org
           storage.location=/usr/share/nginx/html/storage
+
+          # Stripe Configuration
+          stripe.apiKey=${{ secrets.STRIPE_API_KEY }}
+          stripe.success.url=${{ secrets.STRIPE_SUCCESS_URL }}
+          stripe.cancel.url=${{ secrets.STRIPE_CANCEL_URL }}
           EOL
 
       - name: Build and push Docker images
