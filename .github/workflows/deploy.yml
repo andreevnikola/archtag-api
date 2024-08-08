@@ -27,9 +27,9 @@ jobs:
           spring.application.name=security
 
           # Updated Database Configuration
-          spring.datasource.url=jdbc:postgresql://195.179.231.200:5432/archtag
-          spring.datasource.username=archtagadmin
-          spring.datasource.password=2024archtagplovdiv
+          spring.datasource.url=${{ secrets.DB_URL }}
+          spring.datasource.username=${{ secrets.DB_USERNAME }}
+          spring.datasource.password=${{ secrets.DB_PASSWORD }}
           spring.datasource.driver-class-name=org.postgresql.Driver
 
           spring.jpa.hibernate.ddl-auto=update
@@ -38,7 +38,7 @@ jobs:
           spring.jpa.database=postgresql
           spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 
-          authentication.secret-key=BFA9E810C3A7856B2F6D08A7E48FB72B4C0C4B3C20C1E6BD0D3B5E8A7C8D1F2E
+          authentication.secret-key=${{ secrets.AUTH_SECRET_KEY }}
           authentication.token-expiration=60
 
           # PERFORMANCE SETTINGS
@@ -48,8 +48,8 @@ jobs:
           # Email Configuration
           spring.mail.host=smtp.office365.com
           spring.mail.port=587
-          spring.mail.username=no-reply@archtag.org
-          spring.mail.password=2024-archtag-plovdiv
+          spring.mail.username=${{ secrets.EMAIL_USERNAME }}
+          spring.mail.password=${{ secrets.EMAIL_PASSWORD }}
           spring.mail.properties.mail.smtp.auth=true
           spring.mail.properties.mail.smtp.starttls.enable=true
 
@@ -64,8 +64,8 @@ jobs:
 
       - name: Build and push Docker images
         run: |
-          docker build -t vladigpasev/archtag-api:latest .
-          docker push vladigpasev/archtag-api:latest
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/archtag-api:latest .
+          docker push ${{ secrets.DOCKER_USERNAME }}/archtag-api:latest
 
   deploy:
     if: contains(github.event.head_commit.message, 'deploy')
